@@ -80,7 +80,17 @@ enum MessageType: UInt8 {
     // Fragmentation (simplified)
     case fragment = 0x20        // Single fragment type for large messages
     case fileTransfer = 0x22    // Binary file/audio/image payloads
-    
+
+    // MINATO Agent Protocol (0x30–0x37)
+    case agentHandshake = 0x30  // Agent Card exchange
+    case agentMessage   = 0x31  // Agent conversation
+    case agentRequest   = 0x32  // Agent action request
+    case agentResponse  = 0x33  // Agent response/proposal
+    case agentAck       = 0x34  // Agent confirm/reject
+    case agentRevoke    = 0x35  // Agent permission revocation
+    case agentPing      = 0x36  // Agent liveness check
+    case agentLog       = 0x37  // Agent activity log
+
     var description: String {
         switch self {
         case .announce: return "announce"
@@ -91,7 +101,20 @@ enum MessageType: UInt8 {
         case .noiseEncrypted: return "noiseEncrypted"
         case .fragment: return "fragment"
         case .fileTransfer: return "fileTransfer"
+        case .agentHandshake: return "agentHandshake"
+        case .agentMessage: return "agentMessage"
+        case .agentRequest: return "agentRequest"
+        case .agentResponse: return "agentResponse"
+        case .agentAck: return "agentAck"
+        case .agentRevoke: return "agentRevoke"
+        case .agentPing: return "agentPing"
+        case .agentLog: return "agentLog"
         }
+    }
+
+    /// Whether this is a MINATO Agent Protocol message type.
+    var isMINATO: Bool {
+        rawValue >= 0x30 && rawValue <= 0x37
     }
 }
 

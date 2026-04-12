@@ -903,6 +903,11 @@ final class BLEService: NSObject {
             return true
         case .none, .announce, .message, .leave, .requestSync, .fragment, .fileTransfer:
             return false
+        case .agentHandshake, .agentPing:
+            return false  // Cleartext MINATO types
+        case .agentMessage, .agentRequest, .agentResponse, .agentAck,
+             .agentRevoke, .agentLog:
+            return true   // Encrypted MINATO types
         }
     }
 
@@ -3776,7 +3781,11 @@ extension BLEService {
             
         case .leave:
             handleLeave(packet, from: senderID)
-            
+
+        case .agentHandshake, .agentMessage, .agentRequest, .agentResponse,
+             .agentAck, .agentRevoke, .agentPing, .agentLog:
+            handleMINATOPacket(packet, from: senderID)
+
         case .none:
             SecureLogger.warning("⚠️ Unknown message type: \(packet.type)", category: .session)
             break

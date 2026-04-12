@@ -19,6 +19,9 @@ struct SyncTypeFlags: OptionSet {
         case .fragment: return 5
         case .requestSync: return 6
         case .fileTransfer: return 7
+        case .agentHandshake, .agentMessage, .agentRequest, .agentResponse,
+             .agentAck, .agentRevoke, .agentPing, .agentLog:
+            return nil  // MINATO types are not synced via gossip
         }
     }
 
