@@ -13,6 +13,14 @@ final class MINATOAgentStore {
     private var _exchangedPeers: Set<String> = []        // PeerID hex set
     private var _trustSettings: [String: TrustSettings] = [:]  // npub → TrustSettings
 
+    /// The AI engine for generating responses. Set at app launch.
+    private(set) var aiEngine: AIEngine?
+
+    /// Configures the AI engine (call once at startup).
+    func setAIEngine(_ engine: AIEngine) {
+        aiEngine = engine
+    }
+
     private init() {}
 
     // MARK: - Local Card

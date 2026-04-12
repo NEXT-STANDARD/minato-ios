@@ -97,68 +97,95 @@ extension BLEService {
             )
         }
 
-        // Dummy agent: auto-reply only to human-originated messages (not to other auto-replies)
+        // Auto-reply only to human-originated messages (not to other auto-replies)
         if !isAutoReply {
-            sendDummyAgentReply(to: senderID, originalContent: originalContent ?? content, intent: intent)
+            sendAIAgentReply(to: senderID, originalContent: originalContent ?? content, intent: intent)
         }
     }
 
-    // MARK: - Dummy Agent Reply
+    // MARK: - AI Agent Reply
 
-    private func sendDummyAgentReply(to peerID: PeerID, originalContent: String, intent: String?) {
-        guard let localCard = MINATOAgentStore.shared.localCard else { return }
+    private func sendAIAgentReply(to peerID: PeerID, originalContent: String, intent: String?) {
+        guard let localCard = MINATOAgentStore.shared.localCard else {
+            SecureLogger.warning("MINATO: no local card, cannot reply", category: .session)
+            return
+        }
+
+        // Lazy-initialize AI engine if not yet set but API key is available
+        if MINATOAgentStore.shared.aiEngine == nil, let apiKey = GeminiAPIKey.default {
+            MINATOAgentStore.shared.setAIEngine(GeminiEngine(apiKey: apiKey))
+        }
+
+        let hasEngine = MINATOAgentStore.shared.aiEngine != nil
+        SecureLogger.info("MINATO: preparing reply (aiEngine=\(hasEngine ? "yes" : "no"))", category: .session)
+
         let remoteCard = MINATOAgentStore.shared.remoteCard(for: peerID)
-        let remoteLang = remoteCard?.ownerLocale ?? "en"
+        let trustMode = MINATOAgentStore.shared.trustSettings(for: remoteCard?.agentId ?? "")?.mode ?? .plan
+
+        let context = AIContext(
+            peerDisplayName: remoteCard?.displayName ?? "Unknown",
+            peerLocale: remoteCard?.ownerLocale ?? "en",
+            localLocale: localCard.ownerLocale,
+            intent: intent,
+            trustMode: trustMode,
+            capabilities: localCard.capabilities
+        )
+
         let localLang = localCard.ownerLocale
 
-        // Generate a contextual fixed response based on intent
-        let (replyContent, replyTranslated) = generateDummyReply(
-            intent: intent,
-            originalContent: originalContent,
-            localLang: localLang,
-            remoteLang: remoteLang
-        )
-
-        sendAgentMessage(
-            to: peerID,
-            content: replyContent,
-            translatedContent: replyTranslated,
-            intent: intent ?? Intent.messageChat.rawValue,
-            isAutoReply: true
-        )
+        // Gemini integration: temporarily disabled pending network debugging
+        // Re-enable by uncommenting the line below
+        // let engine = MINATOAgentStore.shared.aiEngine
+        let engine: AIEngine? = nil
+        if let engine = engine {
+            SecureLogger.info("MINATO: calling Gemini API...", category: .session)
+            Task { [weak self] in
+                guard let self = self else { return }
+                do {
+                    // 10-second timeout to prevent hanging
+                    let reply = try await withThrowingTaskGroup(of: String.self) { group in
+                        group.addTask {
+                            try await engine.generateResponse(to: originalContent, context: context)
+                        }
+                        group.addTask {
+                            try await Task.sleep(nanoseconds: 10_000_000_000)
+                            throw AIEngineError.timeout
+                        }
+                        let result = try await group.next()!
+                        group.cancelAll()
+                        return result
+                    }
+                    SecureLogger.info("MINATO: Gemini replied (\(reply.count) chars)", category: .session)
+                    guard !reply.isEmpty else {
+                        self.sendFallbackReply(to: peerID, originalContent: originalContent, intent: intent, localLang: localLang)
+                        return
+                    }
+                    self.sendAgentMessage(
+                        to: peerID,
+                        content: reply,
+                        translatedContent: nil,
+                        intent: intent ?? Intent.messageChat.rawValue,
+                        isAutoReply: true
+                    )
+                } catch {
+                    SecureLogger.warning("MINATO: AI error: \(error), using fallback", category: .session)
+                    self.sendFallbackReply(to: peerID, originalContent: originalContent, intent: intent, localLang: localLang)
+                }
+            }
+        } else {
+            SecureLogger.info("MINATO: no AI engine, using fallback", category: .session)
+            sendFallbackReply(to: peerID, originalContent: originalContent, intent: intent, localLang: localLang)
+        }
     }
 
-    private func generateDummyReply(intent: String?, originalContent: String, localLang: String, remoteLang: String) -> (String, String?) {
-        switch intent {
-        case Intent.scheduleNegotiate.rawValue:
-            if localLang.hasPrefix("ja") {
-                return ("来週の木曜19時はいかがですか？", "How about next Thursday at 7 PM?")
-            }
-            return ("How about next Thursday at 7 PM?", "来週の木曜19時はいかがですか？")
-
-        case Intent.scheduleConfirm.rawValue:
-            if localLang.hasPrefix("ja") {
-                return ("了解しました！カレンダーに追加しました。", "Got it! Added to calendar.")
-            }
-            return ("Got it! Added to calendar.", "了解しました！カレンダーに追加しました。")
-
-        case Intent.infoExchange.rawValue:
-            if localLang.hasPrefix("ja") {
-                return ("はじめまして！MINATOエージェントです。よろしくお願いします。",
-                        "Nice to meet you! I'm a MINATO agent. Looking forward to connecting.")
-            }
-            return ("Nice to meet you! I'm a MINATO agent. Looking forward to connecting.",
-                    "はじめまして！MINATOエージェントです。よろしくお願いします。")
-
-        default:
-            // General chat reply
-            if localLang.hasPrefix("ja") {
-                return ("メッセージを受け取りました: 「\(originalContent.prefix(30))」",
-                        "Message received: \"\(originalContent.prefix(30))\"")
-            }
-            return ("Message received: \"\(originalContent.prefix(30))\"",
-                    "メッセージを受け取りました: 「\(originalContent.prefix(30))」")
+    private func sendFallbackReply(to peerID: PeerID, originalContent: String, intent: String?, localLang: String) {
+        let reply: String
+        if localLang.hasPrefix("ja") {
+            reply = "メッセージを受け取りました: 「\(originalContent.prefix(30))」"
+        } else {
+            reply = "Message received: \"\(originalContent.prefix(30))\""
         }
+        sendAgentMessage(to: peerID, content: reply, translatedContent: nil, intent: intent ?? Intent.messageChat.rawValue, isAutoReply: true)
     }
 
     // MARK: - Send Agent Message
@@ -187,47 +214,10 @@ extension BLEService {
 
     // MARK: - Nostr Dummy Reply
 
-    /// Send a dummy agent reply via Nostr (called from ChatViewModel+Nostr).
+    /// Send an agent reply via Nostr path (called from ChatViewModel+Nostr).
     func sendDummyReplyViaNostr(to peerID: PeerID, originalContent: String, intent: String?) {
-        guard let localCard = MINATOAgentStore.shared.localCard else { return }
-        let remoteCard = MINATOAgentStore.shared.remoteCard(for: peerID)
-        let remoteLang = remoteCard?.ownerLocale ?? "en"
-        let localLang = localCard.ownerLocale
-
-        let (replyContent, replyTranslated) = generateDummyReply(
-            intent: intent,
-            originalContent: originalContent,
-            localLang: localLang,
-            remoteLang: remoteLang
-        )
-
-        let context: [String: AnyCodableValue] = ["auto_reply": .bool(true)]
-        let payloadContent = PayloadContent(
-            intent: intent ?? Intent.messageChat.rawValue,
-            content: replyContent,
-            originalLanguage: localLang,
-            translatedContent: replyTranslated,
-            status: nil, requestId: nil, action: nil, context: context,
-            proposedEvent: nil, agentCard: nil
-        )
-
-        guard let jsonData = try? JSONEncoder().encode(
-            MINATOPayload(
-                type: MINATOMessageType.agentMessage.description,
-                version: "0.1",
-                from: localCard.agentId,
-                to: "",
-                timestamp: UInt64(Date().timeIntervalSince1970),
-                nonce: UUID().uuidString,
-                payload: payloadContent,
-                signature: nil
-            )
-        ) else { return }
-
-        // Try BLE first, fall back to Nostr
-        if let encoded = encodeMINATOPacket(type: .agentMessage, payload: payloadContent, to: peerID) {
-            sendMINATOPacket(encoded, directedTo: peerID)
-        }
+        // Reuse the same AI-powered reply logic
+        sendAIAgentReply(to: peerID, originalContent: originalContent, intent: intent)
     }
 
     // MARK: - Send Handshake

@@ -61,14 +61,21 @@ struct BitchatApp: App {
 
                     appDelegate.chatViewModel = chatViewModel
 
-                    // Initialize MINATO Agent Card
+                    // Initialize MINATO Agent Card and AI Engine
                     DispatchQueue.global(qos: .utility).async {
                         if let npub = try? idBridge.getCurrentNostrIdentity()?.npub {
+                            let aiEngineId = GeminiAPIKey.default != nil ? "gemini" : "none"
                             let card = AgentCard.create(
                                 agentId: npub,
-                                displayName: chatViewModel.nickname
+                                displayName: chatViewModel.nickname,
+                                aiEngine: aiEngineId
                             )
                             MINATOAgentStore.shared.setLocalCard(card)
+
+                            // Initialize Gemini engine if API key is available
+                            if let apiKey = GeminiAPIKey.default {
+                                MINATOAgentStore.shared.setAIEngine(GeminiEngine(apiKey: apiKey))
+                            }
                         }
                     }
 
