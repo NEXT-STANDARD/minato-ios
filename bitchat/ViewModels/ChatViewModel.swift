@@ -3331,6 +3331,18 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
         }
     }
     
+    // MARK: - MINATO Trust Mode
+
+    /// Updates the trust mode for a MINATO peer.
+    func updateTrustMode(for peerID: PeerID, to mode: TrustMode) {
+        guard let card = MINATOAgentStore.shared.remoteCard(for: peerID) else { return }
+        var settings = MINATOAgentStore.shared.trustSettings(for: card.agentId) ?? TrustSettings.defaultSettings()
+        settings.mode = mode
+        settings.lastInteraction = UInt64(Date().timeIntervalSince1970)
+        MINATOAgentStore.shared.updateTrustSettings(settings, for: card.agentId)
+        objectWillChange.send()
+    }
+
     // MARK: - MINATO Agent Message
 
     func didReceiveAgentMessage(from peerID: PeerID, content: String, translatedContent: String?, intent: String?, timestamp: Date) {

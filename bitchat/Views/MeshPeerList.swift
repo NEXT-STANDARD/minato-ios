@@ -7,6 +7,7 @@ struct MeshPeerList: View {
     let onTapPeer: (PeerID) -> Void
     let onToggleFavorite: (PeerID) -> Void
     let onShowFingerprint: (PeerID) -> Void
+    var onUpdateTrustMode: ((PeerID, TrustMode) -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
 
     @State private var orderedIDs: [String] = []
@@ -121,6 +122,8 @@ struct MeshPeerList: View {
 
                         // MINATO Agent Card badge
                         if !isMe, let card = MINATOAgentStore.shared.remoteCard(for: peer.peerID) {
+                            let currentMode = MINATOAgentStore.shared.trustSettings(for: card.agentId)?.mode
+                                ?? TrustMode(rawValue: card.defaultTrustMode) ?? .plan
                             HStack(spacing: 2) {
                                 Image(systemName: "person.badge.shield.checkmark.fill")
                                     .font(.bitchatSystem(size: 9))
@@ -128,11 +131,9 @@ struct MeshPeerList: View {
                                 Text(card.ownerLocale.uppercased())
                                     .font(.bitchatSystem(size: 9, design: .monospaced))
                                     .foregroundColor(.cyan)
-                                if let mode = TrustMode(rawValue: card.defaultTrustMode) {
-                                    Text(mode.displayName)
-                                        .font(.bitchatSystem(size: 9, design: .monospaced))
-                                        .foregroundColor(.cyan.opacity(0.7))
-                                }
+                                Text(currentMode.displayName)
+                                    .font(.bitchatSystem(size: 9, design: .monospaced))
+                                    .foregroundColor(.cyan.opacity(0.7))
                             }
                         }
 
@@ -161,6 +162,20 @@ struct MeshPeerList: View {
                     .contentShape(Rectangle())
                     .onTapGesture { if !isMe { onTapPeer(peer.peerID) } }
                     .onTapGesture(count: 2) { if !isMe { onShowFingerprint(peer.peerID) } }
+                    .contextMenu {
+                        if !isMe, let card = MINATOAgentStore.shared.remoteCard(for: peer.peerID) {
+                            let currentMode = MINATOAgentStore.shared.trustSettings(for: card.agentId)?.mode ?? .plan
+                            Section("Trust Mode") {
+                                ForEach(TrustMode.allCases, id: \.self) { mode in
+                                    Button {
+                                        onUpdateTrustMode?(peer.peerID, mode)
+                                    } label: {
+                                        Label(mode.displayName, systemImage: currentMode == mode ? "checkmark.circle.fill" : "circle")
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             // Seed and update order outside result builder

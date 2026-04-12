@@ -44,7 +44,7 @@ enum TrustMode: String, Codable, CaseIterable {
 
 /// Per-peer trust configuration stored locally.
 struct TrustSettings: Codable, Equatable {
-    let mode: TrustMode
+    var mode: TrustMode
     let customPermissions: [String: Bool]   // Capability overrides
     let establishedAt: UInt64               // Unix timestamp
     var lastInteraction: UInt64             // Unix timestamp

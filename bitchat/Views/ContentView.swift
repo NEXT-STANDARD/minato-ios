@@ -537,6 +537,9 @@ struct ContentView: View {
                             },
                             onShowFingerprint: { peerID in
                                 viewModel.showFingerprint(for: peerID)
+                            },
+                            onUpdateTrustMode: { peerID, mode in
+                                viewModel.updateTrustMode(for: peerID, to: mode)
                             }
                         )
                     }
