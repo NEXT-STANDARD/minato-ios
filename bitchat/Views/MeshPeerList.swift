@@ -119,6 +119,23 @@ struct MeshPeerList: View {
                             }
                         }
 
+                        // MINATO Agent Card badge
+                        if !isMe, let card = MINATOAgentStore.shared.remoteCard(for: peer.peerID) {
+                            HStack(spacing: 2) {
+                                Image(systemName: "person.badge.shield.checkmark.fill")
+                                    .font(.bitchatSystem(size: 9))
+                                    .foregroundColor(.cyan)
+                                Text(card.ownerLocale.uppercased())
+                                    .font(.bitchatSystem(size: 9, design: .monospaced))
+                                    .foregroundColor(.cyan)
+                                if let mode = TrustMode(rawValue: card.defaultTrustMode) {
+                                    Text(mode.displayName)
+                                        .font(.bitchatSystem(size: 9, design: .monospaced))
+                                        .foregroundColor(.cyan.opacity(0.7))
+                                }
+                            }
+                        }
+
                         Spacer()
 
                         // Unread message indicator for this peer
