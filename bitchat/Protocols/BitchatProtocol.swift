@@ -202,6 +202,9 @@ protocol BitchatDelegate: AnyObject {
     // Bluetooth state updates for user notifications
     func didUpdateBluetoothState(_ state: CBManagerState)
     func didReceivePublicMessage(from peerID: PeerID, nickname: String, content: String, timestamp: Date, messageID: String?)
+
+    // MINATO Agent Protocol
+    func didReceiveAgentMessage(from peerID: PeerID, content: String, translatedContent: String?, intent: String?, timestamp: Date)
 }
 
 // Provide default implementation to make it effectively optional
@@ -219,6 +222,10 @@ extension BitchatDelegate {
     }
 
     func didReceivePublicMessage(from peerID: PeerID, nickname: String, content: String, timestamp: Date, messageID: String?) {
+        // Default empty implementation
+    }
+
+    func didReceiveAgentMessage(from peerID: PeerID, content: String, translatedContent: String?, intent: String?, timestamp: Date) {
         // Default empty implementation
     }
 }

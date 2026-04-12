@@ -41,6 +41,12 @@ extension ChatViewModel {
             sendGeohashDM(content, to: peerID)
             return
         }
+
+        // MINATO agent routing: if we have an Agent Card for this peer, use MINATO protocol
+        if MINATOAgentStore.shared.remoteCard(for: peerID) != nil {
+            sendAgentMessage(content, to: peerID)
+            return
+        }
         
         // Determine routing method and recipient nickname
         guard let noiseKey = Data(hexString: peerID.id) else { return }

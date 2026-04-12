@@ -3331,6 +3331,75 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
         }
     }
     
+    // MARK: - MINATO Agent Message
+
+    func didReceiveAgentMessage(from peerID: PeerID, content: String, translatedContent: String?, intent: String?, timestamp: Date) {
+        Task { @MainActor in
+            let card = MINATOAgentStore.shared.remoteCard(for: peerID)
+            let agentName = card.map { "🤖 \($0.displayName)" } ?? "🤖 Agent-\(peerID.id.prefix(4))"
+
+            // Display the translated content if available, original otherwise
+            let displayContent = translatedContent ?? content
+
+            let msg = BitchatMessage(
+                id: UUID().uuidString,
+                sender: agentName,
+                content: displayContent,
+                timestamp: timestamp,
+                isRelay: false,
+                isPrivate: true,
+                recipientNickname: nickname,
+                senderPeerID: peerID,
+                mentions: nil,
+                deliveryStatus: nil
+            )
+
+            if privateChats[peerID] == nil {
+                privateChats[peerID] = []
+            }
+            privateChats[peerID]?.append(msg)
+
+            if selectedPrivateChatPeer != peerID {
+                unreadPrivateMessages.insert(peerID)
+            }
+
+            objectWillChange.send()
+        }
+    }
+
+    /// Send a message via the MINATO agent protocol to a peer.
+    func sendAgentMessage(_ content: String, to peerID: PeerID) {
+        guard let bleService = meshService as? BLEService else { return }
+
+        // Add our message to the chat UI
+        let msg = BitchatMessage(
+            id: UUID().uuidString,
+            sender: nickname,
+            content: content,
+            timestamp: Date(),
+            isRelay: false,
+            isPrivate: true,
+            recipientNickname: nil,
+            senderPeerID: meshService.myPeerID,
+            mentions: nil,
+            deliveryStatus: nil
+        )
+
+        if privateChats[peerID] == nil {
+            privateChats[peerID] = []
+        }
+        privateChats[peerID]?.append(msg)
+        objectWillChange.send()
+
+        // Send via MINATO protocol
+        bleService.sendAgentMessage(
+            to: peerID,
+            content: content,
+            translatedContent: nil,
+            intent: Intent.messageChat.rawValue
+        )
+    }
+
     func didUpdatePeerList(_ peers: [PeerID]) {
         // UI updates must run on the main thread.
         // The delegate callback is not guaranteed to be on the main thread.
