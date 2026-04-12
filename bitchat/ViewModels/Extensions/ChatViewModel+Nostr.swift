@@ -152,17 +152,28 @@ extension ChatViewModel {
         deduplicationService.recordNostrEvent(giftWrap.id)
         
         guard let (content, senderPubkey, rumorTs) = try? NostrProtocol.decryptPrivateMessage(giftWrap: giftWrap, recipientIdentity: id),
-              let packet = Self.decodeEmbeddedBitChatPacket(from: content),
-              packet.type == MessageType.noiseEncrypted.rawValue,
+              let packet = Self.decodeEmbeddedBitChatPacket(from: content)
+        else {
+            return
+        }
+
+        let messageTimestamp = Date(timeIntervalSince1970: TimeInterval(rumorTs))
+        let convKey = PeerID(nostr_: senderPubkey)
+        nostrKeyMapping[convKey] = senderPubkey
+
+        // MINATO Agent Protocol messages (0x30–0x37)
+        if NostrEmbeddedBitChat.isMINATOPacket(packet) {
+            handleMINATOViaNostr(packet, senderPubkey: senderPubkey, convKey: convKey, timestamp: messageTimestamp)
+            return
+        }
+
+        // Standard BitChat Noise-encrypted messages
+        guard packet.type == MessageType.noiseEncrypted.rawValue,
               let noisePayload = NoisePayload.decode(packet.payload)
         else {
             return
         }
-        
-        let messageTimestamp = Date(timeIntervalSince1970: TimeInterval(rumorTs))
-        let convKey = PeerID(nostr_: senderPubkey)
-        nostrKeyMapping[convKey] = senderPubkey
-        
+
         switch noisePayload.type {
         case .privateMessage:
             handlePrivateMessage(noisePayload, senderPubkey: senderPubkey, convKey: convKey, id: id, messageTimestamp: messageTimestamp)
@@ -171,7 +182,6 @@ extension ChatViewModel {
         case .readReceipt:
             handleReadReceipt(noisePayload, senderPubkey: senderPubkey, convKey: convKey)
         case .verifyChallenge, .verifyResponse:
-            // QR verification payloads over Nostr are not supported; ignore in geohash DMs
             break
         }
     }
@@ -845,5 +855,48 @@ extension ChatViewModel {
             return convKey.bare
         }
         return displayNameForNostrPubkey(full)
+    }
+
+    // MARK: - MINATO via Nostr
+
+    @MainActor
+    private func handleMINATOViaNostr(_ packet: BitchatPacket, senderPubkey: String, convKey: PeerID, timestamp: Date) {
+        guard let minatoPayload = try? JSONDecoder().decode(MINATOPayload.self, from: packet.payload) else {
+            SecureLogger.warning("Failed to decode MINATO payload from Nostr", category: .session)
+            return
+        }
+
+        let content = minatoPayload.payload.translatedContent ?? minatoPayload.payload.content ?? ""
+        let intent = minatoPayload.payload.intent
+
+        SecureLogger.info("MINATO via Nostr: \(minatoPayload.type) from \(senderPubkey.prefix(8))", category: .session)
+
+        // Display in chat UI using the same delegate path as BLE
+        didReceiveAgentMessage(
+            from: convKey,
+            content: content,
+            translatedContent: minatoPayload.payload.translatedContent,
+            intent: intent,
+            timestamp: timestamp
+        )
+
+        // Dummy agent auto-reply (same as BLE path, but only for non-auto-replies)
+        let isAutoReply: Bool = {
+            if let ctx = minatoPayload.payload.context,
+               case .bool(let val) = ctx["auto_reply"] {
+                return val
+            }
+            return false
+        }()
+
+        if !isAutoReply, let bleService = meshService as? BLEService {
+            // Use BLE send if peer is nearby, otherwise Nostr
+            let originalContent = minatoPayload.payload.content ?? content
+            bleService.sendDummyReplyViaNostr(
+                to: convKey,
+                originalContent: originalContent,
+                intent: intent
+            )
+        }
     }
 }

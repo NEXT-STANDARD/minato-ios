@@ -161,6 +161,27 @@ final class FavoritesPersistenceService: ObservableObject {
         )
     }
     
+    /// Register a MINATO peer's Nostr public key for routing.
+    /// Does not change favorite status — only stores the npub association.
+    func registerMINATOPeer(noisePublicKey: Data, nostrPublicKey: String, nickname: String) {
+        let existing = favorites[noisePublicKey]
+        if existing?.peerNostrPublicKey != nil { return }  // Already has npub
+
+        let relationship = FavoriteRelationship(
+            peerNoisePublicKey: noisePublicKey,
+            peerNostrPublicKey: nostrPublicKey,
+            peerNickname: existing?.peerNickname ?? nickname,
+            isFavorite: existing?.isFavorite ?? false,
+            theyFavoritedUs: existing?.theyFavoritedUs ?? false,
+            favoritedAt: existing?.favoritedAt ?? Date(),
+            lastUpdated: Date()
+        )
+        favorites[noisePublicKey] = relationship
+        saveFavorites()
+
+        SecureLogger.info("MINATO: registered npub for \(nickname)", category: .session)
+    }
+
     /// Check if a peer is favorited by us
     func isFavorite(_ peerNoisePublicKey: Data) -> Bool {
         favorites[peerNoisePublicKey]?.isFavorite ?? false

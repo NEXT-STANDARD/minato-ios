@@ -20,6 +20,11 @@ final class MessageRouter {
     private static let maxMessagesPerPeer = 100
     private static let messageTTLSeconds: TimeInterval = 24 * 60 * 60 // 24 hours
 
+    /// Access the Nostr transport for MINATO fallback routing.
+    var nostrTransport: NostrTransport? {
+        transports.compactMap { $0 as? NostrTransport }.first
+    }
+
     init(transports: [Transport]) {
         self.transports = transports
 

@@ -193,6 +193,31 @@ final class NostrTransport: Transport, @unchecked Sendable {
         }
     }
 
+    // MARK: - MINATO Agent Protocol
+
+    /// Send a MINATO agent message via Nostr gift-wrapped DM.
+    func sendMINATOMessage(type: MINATOMessageType, jsonPayload: Data, to peerID: PeerID) {
+        Task { @MainActor in
+            guard let recipientNpub = resolveRecipientNpub(for: peerID),
+                  let recipientHex = npubToHex(recipientNpub),
+                  let senderIdentity = try? dependencies.currentIdentity() else {
+                SecureLogger.warning("NostrTransport: cannot send MINATO \(type.description) — no npub for \(peerID.id.prefix(8))", category: .session)
+                return
+            }
+            guard let embedded = NostrEmbeddedBitChat.encodeMINATOForNostr(
+                type: type,
+                jsonPayload: jsonPayload,
+                recipientPeerID: peerID,
+                senderPeerID: senderPeerID
+            ) else {
+                SecureLogger.error("NostrTransport: failed to embed MINATO packet", category: .session)
+                return
+            }
+            SecureLogger.info("NostrTransport: sending MINATO \(type.description) to \(recipientNpub.prefix(16))…", category: .session)
+            sendWrappedMessage(content: embedded, recipientHex: recipientHex, senderIdentity: senderIdentity)
+        }
+    }
+
     func sendBroadcastAnnounce() { /* no-op for Nostr */ }
     func sendDeliveryAck(for messageID: String, to peerID: PeerID) {
         Task { @MainActor in

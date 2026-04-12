@@ -3391,13 +3391,42 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
         privateChats[peerID]?.append(msg)
         objectWillChange.send()
 
-        // Send via MINATO protocol
-        bleService.sendAgentMessage(
-            to: peerID,
-            content: content,
-            translatedContent: nil,
-            intent: Intent.messageChat.rawValue
-        )
+        // Send via MINATO protocol: BLE first, Nostr fallback
+        let isBLEReachable = meshService.isPeerConnected(peerID) || meshService.isPeerReachable(peerID)
+
+        if isBLEReachable, let bleService = meshService as? BLEService {
+            bleService.sendAgentMessage(
+                to: peerID,
+                content: content,
+                translatedContent: nil,
+                intent: Intent.messageChat.rawValue
+            )
+        } else if let nostrTransport = messageRouter.nostrTransport {
+            // Encode MINATO payload and send via Nostr
+            let payloadContent = PayloadContent(
+                intent: Intent.messageChat.rawValue,
+                content: content,
+                originalLanguage: MINATOAgentStore.shared.localCard?.ownerLocale,
+                translatedContent: nil,
+                status: nil, requestId: nil, action: nil, context: nil,
+                proposedEvent: nil, agentCard: nil
+            )
+            if let bleService = meshService as? BLEService,
+               let jsonData = try? JSONEncoder().encode(
+                   MINATOPayload(
+                       type: MINATOMessageType.agentMessage.description,
+                       version: "0.1",
+                       from: MINATOAgentStore.shared.localCard?.agentId ?? "",
+                       to: "",
+                       timestamp: UInt64(Date().timeIntervalSince1970),
+                       nonce: UUID().uuidString,
+                       payload: payloadContent,
+                       signature: nil
+                   )
+               ) {
+                nostrTransport.sendMINATOMessage(type: .agentMessage, jsonPayload: jsonData, to: peerID)
+            }
+        }
     }
 
     func didUpdatePeerList(_ peers: [PeerID]) {

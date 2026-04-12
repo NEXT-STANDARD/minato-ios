@@ -35,9 +35,29 @@ extension BLEService {
             return
         }
 
-        SecureLogger.info("Received Agent Card: \(card.displayName) [\(card.ownerLocale)]", category: .session)
+        SecureLogger.info("Received Agent Card: \(card.displayName) [\(card.ownerLocale)] npub=\(card.agentId.prefix(12))", category: .session)
 
         MINATOAgentStore.shared.saveRemoteCard(card, for: senderID)
+
+        // Bridge Agent Card npub to FavoritesPersistenceService for Nostr routing
+        if let noiseKey = Data(hexString: senderID.id), !card.agentId.isEmpty {
+            let agentId = card.agentId
+            let displayName = card.displayName
+            DispatchQueue.main.async {
+                // Convert npub (bech32) to hex pubkey if needed
+                let nostrPubkey: String
+                if agentId.hasPrefix("npub1"), let decoded = try? Bech32.decode(agentId) {
+                    nostrPubkey = decoded.data.hexEncodedString()
+                } else {
+                    nostrPubkey = agentId
+                }
+                FavoritesPersistenceService.shared.registerMINATOPeer(
+                    noisePublicKey: noiseKey,
+                    nostrPublicKey: nostrPubkey,
+                    nickname: displayName
+                )
+            }
+        }
 
         if !MINATOAgentStore.shared.hasExchangedWith(senderID) {
             MINATOAgentStore.shared.markExchanged(senderID)
@@ -163,6 +183,51 @@ extension BLEService {
 
         sendMINATOPacket(encoded, directedTo: peerID)
         SecureLogger.info("Sent AGENT_MESSAGE to \(peerID.id.prefix(8))", category: .session)
+    }
+
+    // MARK: - Nostr Dummy Reply
+
+    /// Send a dummy agent reply via Nostr (called from ChatViewModel+Nostr).
+    func sendDummyReplyViaNostr(to peerID: PeerID, originalContent: String, intent: String?) {
+        guard let localCard = MINATOAgentStore.shared.localCard else { return }
+        let remoteCard = MINATOAgentStore.shared.remoteCard(for: peerID)
+        let remoteLang = remoteCard?.ownerLocale ?? "en"
+        let localLang = localCard.ownerLocale
+
+        let (replyContent, replyTranslated) = generateDummyReply(
+            intent: intent,
+            originalContent: originalContent,
+            localLang: localLang,
+            remoteLang: remoteLang
+        )
+
+        let context: [String: AnyCodableValue] = ["auto_reply": .bool(true)]
+        let payloadContent = PayloadContent(
+            intent: intent ?? Intent.messageChat.rawValue,
+            content: replyContent,
+            originalLanguage: localLang,
+            translatedContent: replyTranslated,
+            status: nil, requestId: nil, action: nil, context: context,
+            proposedEvent: nil, agentCard: nil
+        )
+
+        guard let jsonData = try? JSONEncoder().encode(
+            MINATOPayload(
+                type: MINATOMessageType.agentMessage.description,
+                version: "0.1",
+                from: localCard.agentId,
+                to: "",
+                timestamp: UInt64(Date().timeIntervalSince1970),
+                nonce: UUID().uuidString,
+                payload: payloadContent,
+                signature: nil
+            )
+        ) else { return }
+
+        // Try BLE first, fall back to Nostr
+        if let encoded = encodeMINATOPacket(type: .agentMessage, payload: payloadContent, to: peerID) {
+            sendMINATOPacket(encoded, directedTo: peerID)
+        }
     }
 
     // MARK: - Send Handshake

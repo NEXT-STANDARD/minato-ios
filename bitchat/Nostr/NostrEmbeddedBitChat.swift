@@ -96,6 +96,31 @@ struct NostrEmbeddedBitChat {
         return "bitchat1:" + base64URLEncode(data)
     }
 
+    // MARK: - MINATO Agent Protocol
+
+    /// Build a `bitchat1:` base64url-encoded BitChat packet carrying a MINATO agent payload for Nostr DMs.
+    static func encodeMINATOForNostr(type: MINATOMessageType, jsonPayload: Data, recipientPeerID: PeerID, senderPeerID: PeerID) -> String? {
+        let recipientID = normalizeRecipientPeerID(recipientPeerID)
+
+        let packet = BitchatPacket(
+            type: type.rawValue,
+            senderID: Data(hexString: senderPeerID.id) ?? Data(),
+            recipientID: Data(hexString: recipientID.id),
+            timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
+            payload: jsonPayload,
+            signature: nil,
+            ttl: 7
+        )
+
+        guard let data = packet.toBinaryData() else { return nil }
+        return "bitchat1:" + base64URLEncode(data)
+    }
+
+    /// Check if a decoded BitchatPacket is a MINATO agent message (0x30–0x37).
+    static func isMINATOPacket(_ packet: BitchatPacket) -> Bool {
+        packet.type >= 0x30 && packet.type <= 0x37
+    }
+
     private static func normalizeRecipientPeerID(_ recipientPeerID: PeerID) -> PeerID {
         if let maybeData = Data(hexString: recipientPeerID.id) {
             if maybeData.count == 32 {
