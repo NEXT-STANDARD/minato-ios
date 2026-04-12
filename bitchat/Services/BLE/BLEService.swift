@@ -995,6 +995,14 @@ final class BLEService: NSObject {
         }
     }
 
+    // MARK: - MINATO Send Bridge
+
+    /// Internal bridge for MINATO extension to send packets via the BLE mesh.
+    func sendMINATOPacket(_ data: Data, directedTo peer: PeerID?) {
+        guard let packet = BinaryProtocol.decode(data) else { return }
+        sendOnAllLinks(packet: packet, data: data, pad: false, directedOnlyPeer: peer)
+    }
+
     private func sendOnAllLinks(packet: BitchatPacket, data: Data, pad: Bool, directedOnlyPeer: PeerID?) {
         // Determine last-hop link for this message to avoid echoing back
         let messageID = makeMessageID(for: packet)

@@ -21,7 +21,6 @@ extension BLEService {
             handleAgentPing(packet, from: senderID)
         case .agentMessage, .agentRequest, .agentResponse, .agentAck,
              .agentRevoke, .agentLog:
-            // These types will be implemented in Phase 3
             SecureLogger.debug("MINATO \(messageType.description) received (handler pending)", category: .session)
         }
     }
@@ -37,14 +36,11 @@ extension BLEService {
 
         SecureLogger.info("Received Agent Card: \(card.displayName) [\(card.ownerLocale)]", category: .session)
 
-        // Store the peer's Agent Card
         MINATOAgentStore.shared.saveRemoteCard(card, for: senderID)
 
-        // Reply with our own Agent Card if we haven't already
         if !MINATOAgentStore.shared.hasExchangedWith(senderID) {
             MINATOAgentStore.shared.markExchanged(senderID)
-            // TODO: Send our Agent Card back (requires wiring send path in BLEService)
-            SecureLogger.info("Should reply with our Agent Card to \(senderID.id.prefix(8))", category: .session)
+            sendAgentHandshake(to: senderID)
         }
     }
 
@@ -52,6 +48,66 @@ extension BLEService {
 
     private func handleAgentPing(_ packet: BitchatPacket, from senderID: PeerID) {
         SecureLogger.debug("AGENT_PING from \(senderID.id.prefix(8))", category: .session)
+    }
+
+    // MARK: - Send
+
+    /// Sends our Agent Card as a handshake to the specified peer.
+    func sendAgentHandshake(to peerID: PeerID) {
+        guard let localCard = MINATOAgentStore.shared.localCard else {
+            SecureLogger.warning("Cannot send handshake: no local Agent Card", category: .session)
+            return
+        }
+
+        let payloadContent = PayloadContent(
+            intent: Intent.connectionEstablish.rawValue,
+            content: nil, originalLanguage: nil, translatedContent: nil,
+            status: nil, requestId: nil, action: nil, context: nil,
+            proposedEvent: nil, agentCard: localCard
+        )
+
+        guard let encoded = encodeMINATOPacket(
+            type: .agentHandshake,
+            payload: payloadContent,
+            to: peerID
+        ) else { return }
+
+        sendMINATOPacket(encoded, directedTo: peerID)
+        SecureLogger.info("Sent Agent Card to \(peerID.id.prefix(8))", category: .session)
+    }
+
+    // MARK: - Encode Helper
+
+    private func encodeMINATOPacket(type: MINATOMessageType, payload: PayloadContent, to peerID: PeerID?) -> Data? {
+        guard let localCard = MINATOAgentStore.shared.localCard else { return nil }
+
+        let envelope = MINATOPayload(
+            type: type.description,
+            version: "0.1",
+            from: localCard.agentId,
+            to: peerID.map { _ in "" } ?? "",
+            timestamp: UInt64(Date().timeIntervalSince1970),
+            nonce: UUID().uuidString,
+            payload: payload,
+            signature: nil
+        )
+
+        guard let jsonData = try? JSONEncoder().encode(envelope) else {
+            SecureLogger.warning("Failed to encode MINATO payload", category: .session)
+            return nil
+        }
+
+        let packet = BitchatPacket(
+            type: type.rawValue,
+            senderID: Data(hexString: myPeerID.id) ?? Data(),
+            recipientID: peerID.flatMap { Data(hexString: $0.id) },
+            timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
+            payload: jsonData,
+            signature: nil,
+            ttl: 3
+        )
+
+        return BinaryProtocol.encode(packet)
     }
 
     // MARK: - Decode Helper

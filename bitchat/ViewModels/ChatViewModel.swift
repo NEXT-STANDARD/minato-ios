@@ -3257,6 +3257,13 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
 
             // Flush any queued messages for this peer via router
             messageRouter.flushOutbox(for: peerID)
+
+            // Initiate MINATO Agent Card handshake with newly connected peer
+            if MINATOAgentStore.shared.localCard != nil,
+               !MINATOAgentStore.shared.hasExchangedWith(peerID),
+               let bleService = meshService as? BLEService {
+                bleService.sendAgentHandshake(to: peerID)
+            }
         }
     }
     

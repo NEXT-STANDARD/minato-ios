@@ -61,6 +61,17 @@ struct BitchatApp: App {
 
                     appDelegate.chatViewModel = chatViewModel
 
+                    // Initialize MINATO Agent Card
+                    DispatchQueue.global(qos: .utility).async {
+                        if let npub = try? idBridge.getCurrentNostrIdentity()?.npub {
+                            let card = AgentCard.create(
+                                agentId: npub,
+                                displayName: chatViewModel.nickname
+                            )
+                            MINATOAgentStore.shared.setLocalCard(card)
+                        }
+                    }
+
                     // Initialize network activation policy; will start Tor/Nostr only when allowed
                     NetworkActivationService.shared.start()
                     
