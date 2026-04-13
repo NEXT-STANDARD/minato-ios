@@ -1373,7 +1373,15 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
     @MainActor
     func updateBluetoothState(_ state: CBManagerState) {
         bluetoothState = state
-        
+
+        #if targetEnvironment(simulator)
+        // iOS Simulator has no Bluetooth hardware. Surfacing the alert every
+        // time the state transitions is noise during development. The app
+        // is still usable via geohash / Nostr — those paths don't rely on BLE.
+        showBluetoothAlert = false
+        bluetoothAlertMessage = ""
+        return
+        #else
         switch state {
         case .poweredOff:
             bluetoothAlertMessage = String(localized: "content.alert.bluetooth_required.off", comment: "Message shown when Bluetooth is turned off")
@@ -1394,8 +1402,9 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
         @unknown default:
             showBluetoothAlert = false
         }
+        #endif
     }
-    
+
     // MARK: - Private Chat Management
 
     /// Initiates a private chat session with a peer.
