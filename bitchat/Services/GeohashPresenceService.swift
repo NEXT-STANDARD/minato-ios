@@ -257,9 +257,14 @@ final class GeohashPresenceService: ObservableObject {
                 senderIdentity: identity
             )
             
-            // Send via RelayManager
-            let targetRelays = relayLookup(geohash, TransportConfig.nostrGeoRelayCount)
-            
+            // Broadcast to geo-closest relays plus the global defaults. Geo-closest
+            // alone can be small regional relays that drop ephemeral events or
+            // rate-limit by client IP (which affects multi-device testing behind
+            // one NAT). Adding the defaults gives peers a reliable common channel.
+            let geoRelays = relayLookup(geohash, TransportConfig.nostrGeoRelayCount)
+            var seen = Set<String>()
+            let targetRelays = (geoRelays + NostrRelayManager.defaultRelays).filter { seen.insert($0).inserted }
+
             if !targetRelays.isEmpty {
                 relaySender(event, targetRelays)
                 SecureLogger.debug("Presence: sent heartbeat for \(geohash) (pub=\(identity.publicKeyHex.prefix(6))...)", category: .session)

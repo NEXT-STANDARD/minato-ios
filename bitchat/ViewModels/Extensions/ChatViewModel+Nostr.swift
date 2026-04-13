@@ -255,7 +255,14 @@ extension ChatViewModel {
         participantTracker.startRefreshTimer()
         let ts = Date().addingTimeInterval(-TransportConfig.nostrGeohashInitialLookbackSeconds)
         let filter = NostrFilter.geohashEphemeral(ch.geohash, since: ts, limit: TransportConfig.nostrGeohashInitialLimit)
-        let subRelays = GeoRelayDirectory.shared.closestRelays(toGeohash: ch.geohash, count: 5)
+        // Subscribe to geo-closest relays plus the global defaults. The geo-closest
+        // set can be small regional relays that are flaky, rate-limit by IP (which
+        // matters when multiple devices share a NAT — e.g. home testing), or drop
+        // ephemeral events. Including the globally reachable defaults gives every
+        // device a common, reliable floor to exchange presence/ephemeral traffic.
+        let geoRelays = GeoRelayDirectory.shared.closestRelays(toGeohash: ch.geohash, count: 5)
+        var seen = Set<String>()
+        let subRelays: [String] = (geoRelays + NostrRelayManager.defaultRelays).filter { seen.insert($0).inserted }
         NostrRelayManager.shared.subscribe(filter: filter, id: subID, relayUrls: subRelays) { [weak self] event in
             self?.handleNostrEvent(event)
         }
