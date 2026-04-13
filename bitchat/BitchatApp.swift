@@ -64,18 +64,31 @@ struct BitchatApp: App {
                     // Initialize MINATO Agent Card and AI Engine
                     DispatchQueue.global(qos: .utility).async {
                         if let npub = try? idBridge.getCurrentNostrIdentity()?.npub {
-                            let aiEngineId = GeminiAPIKey.default != nil ? "gemini" : "none"
-                            let card = AgentCard.create(
-                                agentId: npub,
-                                displayName: chatViewModel.nickname,
-                                aiEngine: aiEngineId
-                            )
-                            MINATOAgentStore.shared.setLocalCard(card)
+                            let store = MINATOAgentStore.shared
+
+                            // Use persisted card if identity matches; otherwise create fresh
+                            if let existing = store.localCard, existing.agentId == npub {
+                                // Persisted card is valid — skip recreation
+                            } else {
+                                let aiEngineId = GeminiAPIKey.default != nil ? "gemini" : "none"
+                                let card = AgentCard.create(
+                                    agentId: npub,
+                                    displayName: chatViewModel.nickname,
+                                    aiEngine: aiEngineId
+                                )
+                                store.setLocalCard(card)
+                            }
 
                             // Initialize Gemini engine if API key is available
                             if let apiKey = GeminiAPIKey.default {
-                                MINATOAgentStore.shared.setAIEngine(GeminiEngine(apiKey: apiKey))
+                                store.setAIEngine(GeminiEngine(apiKey: apiKey))
                             }
+
+                            // Initialize CalendarAdapter for EventKit integration
+                            store.setCalendarAdapter(CalendarAdapter())
+
+                            // Prune stale schedule negotiations (>24h old)
+                            store.pruneStaleNegotiations()
                         }
                     }
 
@@ -240,7 +253,35 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let identifier = response.notification.request.identifier
         let userInfo = response.notification.request.content.userInfo
-        
+
+        // Handle MINATO quick-action approvals
+        if let peerIDStr = userInfo["peerID"] as? String {
+            let peerID = PeerID(str: peerIDStr)
+            let requestId = userInfo["requestId"] as? String
+
+            Task { @MainActor in
+                switch response.actionIdentifier {
+                case NotificationService.approveActionId:
+                    if let requestId, self.chatViewModel?.pendingScheduleApprovals[requestId] != nil {
+                        self.chatViewModel?.approveSchedule(requestId: requestId)
+                    } else {
+                        self.chatViewModel?.approvePendingReply(for: peerID)
+                    }
+                case NotificationService.declineActionId:
+                    if let requestId {
+                        self.chatViewModel?.declineSchedule(requestId: requestId)
+                    } else {
+                        self.chatViewModel?.dismissPendingReply(for: peerID)
+                    }
+                default:
+                    // Default tap — open the chat
+                    self.chatViewModel?.startPrivateChat(with: peerID)
+                }
+                completionHandler()
+            }
+            return
+        }
+
         // Check if this is a private message notification
         if identifier.hasPrefix("private-") {
             // Get peer ID from userInfo

@@ -59,6 +59,12 @@ struct ContentView: View {
     @State private var showLocationNotes = false
     @State private var notesGeohash: String? = nil
     @State private var imagePreviewURL: URL? = nil
+    @State private var showCounterProposalSheet = false
+    @State private var counterProposalRequestId: String = ""
+    @State private var showActivityLogSheet = false
+    @State private var activityLogPeerID: PeerID? = nil
+    @State private var showOnboardingSheet = false
+    @State private var onboardingPeerName: String = ""
 #if os(iOS)
     @State private var showImagePicker = false
     @State private var imagePickerSourceType: UIImagePickerController.SourceType = .camera
@@ -321,6 +327,34 @@ struct ContentView: View {
             }
 
             HStack(alignment: .center, spacing: 4) {
+#if os(iOS)
+                StableTextField(
+                    text: $messageText,
+                    placeholder: String(localized: "content.input.message_placeholder", comment: "Placeholder shown in the chat composer"),
+                    font: .monospacedSystemFont(ofSize: 15, weight: .regular),
+                    textColor: UIColor(textColor),
+                    placeholderColor: UIColor(secondaryTextColor.opacity(0.6)),
+                    onSubmit: { sendMessage() }
+                )
+                .frame(height: 34)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(colorScheme == .dark ? Color.black.opacity(0.35) : Color.white.opacity(0.7))
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onChange(of: messageText) { newValue in
+                    guard viewModel.selectedPrivateChatPeer == nil else { return }
+                    autocompleteDebounceTimer?.invalidate()
+                    autocompleteDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak viewModel] _ in
+                        let cursorPosition = newValue.count
+                        Task { @MainActor in
+                            viewModel?.updateAutocomplete(for: newValue, cursorPosition: cursorPosition)
+                        }
+                    }
+                }
+#else
                 TextField(
                     "",
                     text: $messageText,
@@ -334,9 +368,6 @@ struct ContentView: View {
                 .foregroundColor(textColor)
                 .focused($isTextFieldFocused)
                 .autocorrectionDisabled(true)
-#if os(iOS)
-                .textInputAutocapitalization(.sentences)
-#endif
                 .submitLabel(.send)
                 .onSubmit { sendMessage() }
                 .padding(.vertical, 4)
@@ -356,6 +387,7 @@ struct ContentView: View {
                         }
                     }
                 }
+#endif
 
                 HStack(alignment: .center, spacing: 4) {
                     if shouldShowMediaControls {
@@ -595,6 +627,32 @@ struct ContentView: View {
                                 : String(localized: "content.accessibility.add_favorite", comment: "Accessibility label to add a favorite")
                             )
                         }
+
+                        // MINATO Trust Mode badge with picker
+                        if let match = MINATOAgentStore.shared.findRemoteCard(for: privatePeerID) ?? MINATOAgentStore.shared.findRemoteCard(for: headerContext.headerPeerID) {
+                            trustModeBadge(card: match.card, peerID: match.peerID)
+                            // Activity log button — shows count if there are entries
+                            let logCount = MINATOAgentStore.shared.activityLog(for: match.peerID).count
+                            if logCount > 0 {
+                                Button {
+                                    activityLogPeerID = match.peerID
+                                    showActivityLogSheet = true
+                                } label: {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "list.bullet.clipboard")
+                                            .font(.bitchatSystem(size: 10))
+                                        Text("\(logCount)")
+                                            .font(.bitchatSystem(size: 10, weight: .semibold, design: .monospaced))
+                                    }
+                                    .foregroundColor(.purple)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(Color.purple.opacity(0.12))
+                                    .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                     .frame(maxWidth: .infinity)
 
@@ -637,6 +695,20 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()
+
+            // MINATO: Schedule proposal approval banner
+            if let privatePeerID = viewModel.selectedPrivateChatPeer {
+                let scheduleApprovals = viewModel.pendingScheduleApprovals.values.filter { $0.peerID == privatePeerID }
+                if let approval = scheduleApprovals.first {
+                    scheduleApprovalBanner(approval: approval)
+                }
+            }
+
+            // MINATO: AI proposed reply banner (plan/suggest mode)
+            if let privatePeerID = viewModel.selectedPrivateChatPeer,
+               let pending = viewModel.pendingReplies[privatePeerID.id] {
+                pendingReplyBanner(pending: pending, peerID: privatePeerID)
+            }
 
             inputView
         }
@@ -1047,6 +1119,41 @@ struct ContentView: View {
                 }
             }
         }
+        .sheet(isPresented: $showCounterProposalSheet) {
+            CounterProposalSheet(
+                requestId: counterProposalRequestId,
+                originalEvent: viewModel.pendingScheduleApprovals[counterProposalRequestId]?.proposedEvent,
+                onSubmit: { event in
+                    viewModel.counterSchedule(requestId: counterProposalRequestId, counterEvent: event)
+                    showCounterProposalSheet = false
+                },
+                onCancel: { showCounterProposalSheet = false }
+            )
+        }
+        .sheet(isPresented: $showActivityLogSheet) {
+            if let peerID = activityLogPeerID {
+                ActivityLogSheet(
+                    peerID: peerID,
+                    onClose: { showActivityLogSheet = false }
+                )
+            }
+        }
+        .sheet(isPresented: $showOnboardingSheet) {
+            MINATOOnboardingSheet(
+                peerName: onboardingPeerName,
+                onDismiss: {
+                    UserDefaults.standard.set(true, forKey: "minato.hasSeenOnboarding")
+                    showOnboardingSheet = false
+                }
+            )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: MINATOAgentStore.firstHandshakeCompletedNotification)) { note in
+            // Show onboarding only once per device
+            guard !UserDefaults.standard.bool(forKey: "minato.hasSeenOnboarding") else { return }
+            let peerName = note.userInfo?["peerName"] as? String ?? "peer"
+            onboardingPeerName = peerName
+            showOnboardingSheet = true
+        }
         .onAppear {
             if case .mesh = locationManager.selectedChannel,
                locationManager.permissionState == .authorized,
@@ -1132,6 +1239,248 @@ private extension ContentView {
         case .location:
             return false
         }
+    }
+
+    // MARK: - Trust Mode Badge
+
+    @ViewBuilder
+    private func trustModeBadge(card: AgentCard, peerID: PeerID) -> some View {
+        let currentMode = MINATOAgentStore.shared.trustSettings(for: card.agentId)?.mode ?? .plan
+        Menu {
+            ForEach(TrustMode.allCases, id: \.self) { mode in
+                Button {
+                    viewModel.updateTrustMode(for: peerID, to: mode)
+                } label: {
+                    Label(
+                        "\(mode.displayName) (\(mode.displayNameJA))",
+                        systemImage: currentMode == mode ? "checkmark.circle.fill" : "circle"
+                    )
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: trustModeIcon(currentMode))
+                    .font(.bitchatSystem(size: 9))
+                Text(currentMode.displayNameJA)
+                    .font(.bitchatSystem(size: 9, design: .monospaced))
+            }
+            .foregroundColor(trustModeColor(currentMode))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(trustModeColor(currentMode).opacity(0.12))
+            .cornerRadius(8)
+        }
+    }
+
+    private func trustModeIcon(_ mode: TrustMode) -> String {
+        switch mode {
+        case .plan:     return "person.fill.questionmark"
+        case .suggest:  return "person.2.fill"
+        case .auto:     return "bolt.fill"
+        case .fullAuto: return "figure.mind.and.body"
+        }
+    }
+
+    private func trustModeColor(_ mode: TrustMode) -> Color {
+        switch mode {
+        case .plan:     return .orange
+        case .suggest:  return .cyan
+        case .auto:     return .green
+        case .fullAuto: return .purple
+        }
+    }
+
+    // MARK: - Pending Reply Banner
+
+    @ViewBuilder
+    private func pendingReplyBanner(pending: PendingReply, peerID: PeerID) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.bitchatSystem(size: 11))
+                    .foregroundColor(.cyan)
+                Text("AI返答案")
+                    .font(.bitchatSystem(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.cyan)
+                Spacer()
+                Button {
+                    withAnimation { viewModel.dismissPendingReply(for: peerID) }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.bitchatSystem(size: 10))
+                        .foregroundColor(secondaryTextColor)
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Original message from peer (what we're replying to)
+            HStack(alignment: .top, spacing: 4) {
+                Text("›")
+                    .font(.bitchatSystem(size: 12, design: .monospaced))
+                    .foregroundColor(secondaryTextColor)
+                Text(pending.originalMessage)
+                    .font(.bitchatSystem(size: 11, design: .monospaced))
+                    .foregroundColor(secondaryTextColor)
+                    .lineLimit(2)
+            }
+
+            Text(pending.proposedReply)
+                .font(.bitchatSystem(size: 13, design: .monospaced))
+                .foregroundColor(textColor)
+                .lineLimit(3)
+
+            HStack(spacing: 12) {
+                Button {
+                    withAnimation { viewModel.approvePendingReply(for: peerID) }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "paperplane.fill")
+                            .font(.bitchatSystem(size: 10))
+                        Text("送信")
+                            .font(.bitchatSystem(size: 11, weight: .semibold, design: .monospaced))
+                    }
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Color.cyan)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    messageText = pending.proposedReply
+                    withAnimation { viewModel.dismissPendingReply(for: peerID) }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                            .font(.bitchatSystem(size: 10))
+                        Text("編集")
+                            .font(.bitchatSystem(size: 11, design: .monospaced))
+                    }
+                    .foregroundColor(.cyan)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Color.cyan.opacity(0.15))
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(colorScheme == .dark ? Color.cyan.opacity(0.08) : Color.cyan.opacity(0.05))
+        )
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Schedule Approval Banner
+
+    private func scheduleApprovalBanner(approval: PendingScheduleApproval) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.bitchatSystem(size: 11))
+                    .foregroundColor(.orange)
+                Text("\(approval.peerName) からのスケジュール提案")
+                    .font(.bitchatSystem(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.orange)
+                Spacer()
+                Button {
+                    withAnimation { viewModel.declineSchedule(requestId: approval.requestId) }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.bitchatSystem(size: 10))
+                        .foregroundColor(secondaryTextColor)
+                }
+                .buttonStyle(.plain)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("📅 \(approval.proposedEvent.title)")
+                    .font(.bitchatSystem(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundColor(textColor)
+                Text("🕐 \(ChatViewModel.formatEventTime(approval.proposedEvent.start)) – \(ChatViewModel.formatEventTime(approval.proposedEvent.end))")
+                    .font(.bitchatSystem(size: 12, design: .monospaced))
+                    .foregroundColor(textColor)
+                if let location = approval.proposedEvent.location {
+                    Text("📍 \(location)")
+                        .font(.bitchatSystem(size: 12, design: .monospaced))
+                        .foregroundColor(secondaryTextColor)
+                }
+                if approval.hasConflict {
+                    Text("⚠️ この時間帯に予定があります")
+                        .font(.bitchatSystem(size: 11, design: .monospaced))
+                        .foregroundColor(.red)
+                }
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    withAnimation { viewModel.approveSchedule(requestId: approval.requestId) }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark")
+                            .font(.bitchatSystem(size: 10))
+                        Text("承認")
+                            .font(.bitchatSystem(size: 11, weight: .semibold, design: .monospaced))
+                    }
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Color.green)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    showCounterProposalSheet = true
+                    counterProposalRequestId = approval.requestId
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.bitchatSystem(size: 10))
+                        Text("別日提案")
+                            .font(.bitchatSystem(size: 11, design: .monospaced))
+                    }
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Color.orange.opacity(0.15))
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    withAnimation { viewModel.declineSchedule(requestId: approval.requestId) }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark")
+                            .font(.bitchatSystem(size: 10))
+                        Text("辞退")
+                            .font(.bitchatSystem(size: 11, design: .monospaced))
+                    }
+                    .foregroundColor(.red.opacity(0.8))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(colorScheme == .dark ? Color.orange.opacity(0.08) : Color.orange.opacity(0.05))
+        )
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
     }
 
     private var composerAccentColor: Color {

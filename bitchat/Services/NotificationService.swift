@@ -112,7 +112,8 @@ final class NotificationService {
         guard !isRunningTests else { return }
         authorizer.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if granted {
-                // Permission granted
+                // Register MINATO action categories for quick approval from notifications
+                Self.registerMINATOActionCategories()
             } else {
                 // Permission denied
             }
@@ -124,7 +125,8 @@ final class NotificationService {
         body: String,
         identifier: String,
         userInfo: [String: Any]? = nil,
-        interruptionLevel: UNNotificationInterruptionLevel = .active
+        interruptionLevel: UNNotificationInterruptionLevel = .active,
+        categoryIdentifier: String? = nil
     ) {
         guard !isRunningTests else { return }
         let content = UNMutableNotificationContent()
@@ -132,6 +134,9 @@ final class NotificationService {
         content.body = body
         content.sound = .default
         content.interruptionLevel = interruptionLevel
+        if let categoryIdentifier {
+            content.categoryIdentifier = categoryIdentifier
+        }
 
         if let userInfo = userInfo {
             content.userInfo = userInfo
@@ -163,6 +168,58 @@ final class NotificationService {
         sendLocalNotification(title: title, body: body, identifier: identifier, userInfo: userInfo)
     }
     
+    // MINATO: Register action categories for quick approval from notifications
+    static let minatoReplyCategoryId = "MINATO_REPLY_APPROVAL"
+    static let minatoScheduleCategoryId = "MINATO_SCHEDULE_APPROVAL"
+    static let approveActionId = "MINATO_APPROVE"
+    static let declineActionId = "MINATO_DECLINE"
+
+    static func registerMINATOActionCategories() {
+        let approveReply = UNNotificationAction(
+            identifier: approveActionId, title: "承認して送信", options: [.foreground]
+        )
+        let dismissReply = UNNotificationAction(
+            identifier: declineActionId, title: "却下", options: [.destructive]
+        )
+        let replyCategory = UNNotificationCategory(
+            identifier: minatoReplyCategoryId,
+            actions: [approveReply, dismissReply],
+            intentIdentifiers: [], options: []
+        )
+
+        let approveSchedule = UNNotificationAction(
+            identifier: approveActionId, title: "承認", options: [.foreground]
+        )
+        let declineSchedule = UNNotificationAction(
+            identifier: declineActionId, title: "辞退", options: [.destructive]
+        )
+        let scheduleCategory = UNNotificationCategory(
+            identifier: minatoScheduleCategoryId,
+            actions: [approveSchedule, declineSchedule],
+            intentIdentifiers: [], options: []
+        )
+
+        UNUserNotificationCenter.current().setNotificationCategories([replyCategory, scheduleCategory])
+    }
+
+    // MINATO: Agent needs owner confirmation
+    func sendAgentConfirmationNotification(from peerName: String, message: String, peerID: PeerID, requestId: String? = nil) {
+        let title = "⚡ \(peerName) からのメッセージ"
+        let body = "「\(message.prefix(50))」— 返信してください"
+        let identifier = "agent-confirm-\(UUID().uuidString)"
+        var userInfo: [String: Any] = ["peerID": peerID.id, "actionType": "agent_confirmation"]
+        if let requestId {
+            userInfo["requestId"] = requestId
+            userInfo["categoryIdentifier"] = Self.minatoScheduleCategoryId
+        } else {
+            userInfo["categoryIdentifier"] = Self.minatoReplyCategoryId
+        }
+
+        sendLocalNotification(title: title, body: body, identifier: identifier,
+                              userInfo: userInfo, interruptionLevel: .timeSensitive,
+                              categoryIdentifier: userInfo["categoryIdentifier"] as? String)
+    }
+
     // Geohash public chat notification with deep link to a specific geohash
     func sendGeohashActivityNotification(geohash: String, titlePrefix: String = "#", bodyPreview: String) {
         let title = "\(titlePrefix)\(geohash)"

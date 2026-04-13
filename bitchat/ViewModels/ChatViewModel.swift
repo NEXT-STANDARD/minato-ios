@@ -154,6 +154,16 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
             if !meshService.myPeerID.isEmpty {
                 meshService.setNickname(nickname)
             }
+            // Update MINATO Agent Card displayName when nickname changes
+            if let existing = MINATOAgentStore.shared.localCard, !trimmed.isEmpty, existing.displayName != trimmed {
+                let updated = AgentCard.create(
+                    agentId: existing.agentId,
+                    displayName: trimmed,
+                    ownerLocale: existing.ownerLocale,
+                    aiEngine: existing.aiEngine
+                )
+                MINATOAgentStore.shared.setLocalCard(updated)
+            }
         }
     }
     
@@ -251,8 +261,16 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
     }
     private var peerIndex: [PeerID: BitchatPeer] = [:]
     
+    // MARK: - MINATO Pending Replies
+
+    @Published var pendingReplies: [String: PendingReply] = [:]  // peerID.id → PendingReply
+
+    // MARK: - MINATO Schedule Negotiations
+
+    @Published var pendingScheduleApprovals: [String: PendingScheduleApproval] = [:]  // requestId → approval
+
     // MARK: - Autocomplete Properties
-    
+
     @Published var autocompleteSuggestions: [String] = []
     @Published var showAutocomplete: Bool = false
     @Published var autocompleteRange: NSRange? = nil
@@ -2062,15 +2080,15 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
         )
         
         if !suggestions.isEmpty {
-            autocompleteSuggestions = suggestions
-            autocompleteRange = range
-            showAutocomplete = true
-            selectedAutocompleteIndex = 0
+            if autocompleteSuggestions != suggestions { autocompleteSuggestions = suggestions }
+            if autocompleteRange != range { autocompleteRange = range }
+            if !showAutocomplete { showAutocomplete = true }
+            if selectedAutocompleteIndex != 0 { selectedAutocompleteIndex = 0 }
         } else {
-            autocompleteSuggestions = []
-            autocompleteRange = nil
-            showAutocomplete = false
-            selectedAutocompleteIndex = 0
+            if !autocompleteSuggestions.isEmpty { autocompleteSuggestions = [] }
+            if autocompleteRange != nil { autocompleteRange = nil }
+            if showAutocomplete { showAutocomplete = false }
+            if selectedAutocompleteIndex != 0 { selectedAutocompleteIndex = 0 }
         }
     }
     
@@ -3259,13 +3277,13 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
             messageRouter.flushOutbox(for: peerID)
 
             // Initiate MINATO Agent Card handshake with newly connected peer
-            if MINATOAgentStore.shared.localCard != nil,
-               !MINATOAgentStore.shared.hasExchangedWith(peerID),
-               let bleService = meshService as? BLEService {
-                bleService.sendAgentHandshake(to: peerID)
-            }
+            initiateMINATOHandshakeIfReady(with: peerID)
         }
     }
+
+    /// Deferred-handshake observers keyed by peerID — replaced on reconnect to prevent leaks.
+    /// Stored here; logic lives in ChatViewModel+MINATOAgent.swift.
+    var handshakeDeferObservers: [PeerID: NSObjectProtocol] = [:]
     
     func didDisconnectFromPeer(_ peerID: PeerID) {
         SecureLogger.debug("👋 Peer disconnected: \(peerID)", category: .session)
@@ -3331,113 +3349,17 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
         }
     }
     
-    // MARK: - MINATO Trust Mode
 
-    /// Updates the trust mode for a MINATO peer.
-    func updateTrustMode(for peerID: PeerID, to mode: TrustMode) {
-        guard let card = MINATOAgentStore.shared.remoteCard(for: peerID) else { return }
-        var settings = MINATOAgentStore.shared.trustSettings(for: card.agentId) ?? TrustSettings.defaultSettings()
-        settings.mode = mode
-        settings.lastInteraction = UInt64(Date().timeIntervalSince1970)
-        MINATOAgentStore.shared.updateTrustSettings(settings, for: card.agentId)
-        objectWillChange.send()
-    }
-
-    // MARK: - MINATO Agent Message
-
-    func didReceiveAgentMessage(from peerID: PeerID, content: String, translatedContent: String?, intent: String?, timestamp: Date) {
-        Task { @MainActor in
-            let card = MINATOAgentStore.shared.remoteCard(for: peerID)
-            let agentName = card.map { "🤖 \($0.displayName)" } ?? "🤖 Agent-\(peerID.id.prefix(4))"
-
-            // Display the translated content if available, original otherwise
-            let displayContent = translatedContent ?? content
-
-            let msg = BitchatMessage(
-                id: UUID().uuidString,
-                sender: agentName,
-                content: displayContent,
-                timestamp: timestamp,
-                isRelay: false,
-                isPrivate: true,
-                recipientNickname: nickname,
-                senderPeerID: peerID,
-                mentions: nil,
-                deliveryStatus: nil
-            )
-
-            if privateChats[peerID] == nil {
-                privateChats[peerID] = []
-            }
-            privateChats[peerID]?.append(msg)
-
-            if selectedPrivateChatPeer != peerID {
-                unreadPrivateMessages.insert(peerID)
-            }
-
-            objectWillChange.send()
-        }
-    }
-
-    /// Send a message via the MINATO agent protocol to a peer.
-    func sendAgentMessage(_ content: String, to peerID: PeerID) {
-        guard let bleService = meshService as? BLEService else { return }
-
-        // Add our message to the chat UI
-        let msg = BitchatMessage(
-            id: UUID().uuidString,
-            sender: nickname,
-            content: content,
-            timestamp: Date(),
-            isRelay: false,
-            isPrivate: true,
-            recipientNickname: nil,
-            senderPeerID: meshService.myPeerID,
-            mentions: nil,
-            deliveryStatus: nil
-        )
-
-        if privateChats[peerID] == nil {
-            privateChats[peerID] = []
-        }
-        privateChats[peerID]?.append(msg)
-        objectWillChange.send()
-
-        // Send via MINATO protocol: BLE first, Nostr fallback
-        let isBLEReachable = meshService.isPeerConnected(peerID) || meshService.isPeerReachable(peerID)
-
-        if isBLEReachable, let bleService = meshService as? BLEService {
-            bleService.sendAgentMessage(
-                to: peerID,
-                content: content,
-                translatedContent: nil,
-                intent: Intent.messageChat.rawValue
-            )
-        } else if let nostrTransport = messageRouter.nostrTransport {
-            // Encode MINATO payload and send via Nostr
-            let payloadContent = PayloadContent(
-                intent: Intent.messageChat.rawValue,
-                content: content,
-                originalLanguage: MINATOAgentStore.shared.localCard?.ownerLocale,
-                translatedContent: nil,
-                status: nil, requestId: nil, action: nil, context: nil,
-                proposedEvent: nil, agentCard: nil
-            )
-            if let bleService = meshService as? BLEService,
-               let jsonData = try? JSONEncoder().encode(
-                   MINATOPayload(
-                       type: MINATOMessageType.agentMessage.description,
-                       version: "0.1",
-                       from: MINATOAgentStore.shared.localCard?.agentId ?? "",
-                       to: "",
-                       timestamp: UInt64(Date().timeIntervalSince1970),
-                       nonce: UUID().uuidString,
-                       payload: payloadContent,
-                       signature: nil
-                   )
-               ) {
-                nostrTransport.sendMINATOMessage(type: .agentMessage, jsonPayload: jsonData, to: peerID)
-            }
+    /// Translate owner's message to peer's language if they differ.
+    func translateOwnerMessage(_ text: String, from source: String, to target: String) async -> String? {
+        let sourceLang = String(source.prefix(2))
+        let targetLang = String(target.prefix(2))
+        guard sourceLang != targetLang, let engine = MINATOAgentStore.shared.aiEngine else { return nil }
+        do {
+            let translated = try await engine.translateMessage(text, from: source, to: target)
+            return translated.isEmpty ? nil : translated
+        } catch {
+            return nil
         }
     }
 

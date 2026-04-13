@@ -205,6 +205,12 @@ protocol BitchatDelegate: AnyObject {
 
     // MINATO Agent Protocol
     func didReceiveAgentMessage(from peerID: PeerID, content: String, translatedContent: String?, intent: String?, timestamp: Date)
+    func didReceiveAgentPendingReply(for peerID: PeerID, originalMessage: String, proposedReply: String?, peerName: String)
+
+    // MINATO Schedule Negotiation
+    func didReceiveAgentRequest(from peerID: PeerID, requestId: String, intent: String?, action: String?, proposedEvent: ProposedEvent?, content: String?, translatedContent: String?, timestamp: Date)
+    func didReceiveAgentResponse(from peerID: PeerID, requestId: String, proposedEvent: ProposedEvent?, content: String?, translatedContent: String?, status: String?, timestamp: Date)
+    func didReceiveAgentAck(from peerID: PeerID, requestId: String, status: String, content: String?, translatedContent: String?, timestamp: Date)
 }
 
 // Provide default implementation to make it effectively optional
@@ -226,6 +232,22 @@ extension BitchatDelegate {
     }
 
     func didReceiveAgentMessage(from peerID: PeerID, content: String, translatedContent: String?, intent: String?, timestamp: Date) {
+        // Default empty implementation
+    }
+
+    func didReceiveAgentPendingReply(for peerID: PeerID, originalMessage: String, proposedReply: String?, peerName: String) {
+        // Default empty implementation
+    }
+
+    func didReceiveAgentRequest(from peerID: PeerID, requestId: String, intent: String?, action: String?, proposedEvent: ProposedEvent?, content: String?, translatedContent: String?, timestamp: Date) {
+        // Default empty implementation
+    }
+
+    func didReceiveAgentResponse(from peerID: PeerID, requestId: String, proposedEvent: ProposedEvent?, content: String?, translatedContent: String?, status: String?, timestamp: Date) {
+        // Default empty implementation
+    }
+
+    func didReceiveAgentAck(from peerID: PeerID, requestId: String, status: String, content: String?, translatedContent: String?, timestamp: Date) {
         // Default empty implementation
     }
 }

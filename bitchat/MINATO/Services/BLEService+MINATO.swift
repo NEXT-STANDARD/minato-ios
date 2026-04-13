@@ -21,7 +21,13 @@ extension BLEService {
             handleAgentMessage(packet, from: senderID)
         case .agentPing:
             handleAgentPing(packet, from: senderID)
-        case .agentRequest, .agentResponse, .agentAck, .agentRevoke, .agentLog:
+        case .agentRequest:
+            handleAgentRequest(packet, from: senderID)
+        case .agentResponse:
+            handleAgentResponse(packet, from: senderID)
+        case .agentAck:
+            handleAgentAck(packet, from: senderID)
+        case .agentRevoke, .agentLog:
             SecureLogger.debug("MINATO \(messageType.description) received (handler pending)", category: .session)
         }
     }
@@ -60,8 +66,12 @@ extension BLEService {
         }
 
         if !MINATOAgentStore.shared.hasExchangedWith(senderID) {
-            MINATOAgentStore.shared.markExchanged(senderID)
-            sendAgentHandshake(to: senderID)
+            if MINATOAgentStore.shared.localCard != nil {
+                MINATOAgentStore.shared.markExchanged(senderID)
+                sendAgentHandshake(to: senderID)
+            } else {
+                SecureLogger.info("MINATO: deferring handshake reply (local card not ready)", category: .session)
+            }
         }
     }
 
@@ -123,6 +133,7 @@ extension BLEService {
         let trustMode = MINATOAgentStore.shared.trustSettings(for: remoteCard?.agentId ?? "")?.mode ?? .plan
 
         let context = AIContext(
+            ownerDisplayName: localCard.displayName,
             peerDisplayName: remoteCard?.displayName ?? "Unknown",
             peerLocale: remoteCard?.ownerLocale ?? "en",
             localLocale: localCard.ownerLocale,
@@ -133,48 +144,154 @@ extension BLEService {
 
         let localLang = localCard.ownerLocale
 
-        // Gemini integration: temporarily disabled pending network debugging
-        // Re-enable by uncommenting the line below
-        // let engine = MINATOAgentStore.shared.aiEngine
-        let engine: AIEngine? = nil
+        let engine = MINATOAgentStore.shared.aiEngine
+        // Plan mode: always require approval
+        // Suggest mode: auto-send for short casual messages (greetings, acks) — still require approval for substantive
+        // Auto/FullAuto: auto-execute (allowsAutoExecution = true)
+        let requiresApproval: Bool = {
+            switch trustMode {
+            case .plan:
+                return true
+            case .suggest:
+                // Auto-send short, casual messages; require approval for substantive ones
+                return !Self.isLowStakesMessage(originalContent)
+            case .auto, .fullAuto:
+                return false
+            }
+        }()
+
         if let engine = engine {
-            SecureLogger.info("MINATO: calling Gemini API...", category: .session)
+            SecureLogger.info("MINATO: calling AI engine (\(engine.engineId)), approval=\(requiresApproval)...", category: .session)
             Task { [weak self] in
                 guard let self = self else { return }
                 do {
-                    // 10-second timeout to prevent hanging
-                    let reply = try await withThrowingTaskGroup(of: String.self) { group in
-                        group.addTask {
-                            try await engine.generateResponse(to: originalContent, context: context)
+                    let reply = try await engine.generateResponse(to: originalContent, context: context)
+                    SecureLogger.info("MINATO: AI replied (\(reply.count) chars)", category: .session)
+                    let replyText = reply.isEmpty ? nil : reply
+
+                    if requiresApproval {
+                        // Plan/Suggest: send interim ack to peer (throttled: once per 5 min)
+                        if MINATOAgentStore.shared.checkAndMarkInterimAck(to: peerID) {
+                            let ownerName = localCard.displayName
+                            let ack = localLang.hasPrefix("ja")
+                                ? "\(ownerName)に確認しますね！少々お待ちください。"
+                                : "Let me check with \(ownerName). Please wait a moment."
+                            self.sendAgentMessage(to: peerID, content: ack, translatedContent: nil,
+                                                  intent: intent ?? Intent.messageChat.rawValue, isAutoReply: true)
                         }
-                        group.addTask {
-                            try await Task.sleep(nanoseconds: 10_000_000_000)
-                            throw AIEngineError.timeout
+
+                        let pending = PendingReply(
+                            id: UUID().uuidString,
+                            peerID: peerID,
+                            originalMessage: originalContent,
+                            proposedReply: replyText ?? originalContent,
+                            intent: intent,
+                            createdAt: Date()
+                        )
+                        MINATOAgentStore.shared.addPendingReply(pending)
+                        SecureLogger.info("MINATO: queued pending reply for owner approval", category: .session)
+
+                        // Notify owner via delegate (ChatViewModel) and local notification
+                        let peerName = remoteCard?.displayName ?? "Unknown"
+                        DispatchQueue.main.async { [weak self] in
+                            self?.delegate?.didReceiveAgentPendingReply(
+                                for: peerID,
+                                originalMessage: originalContent,
+                                proposedReply: replyText,
+                                peerName: peerName
+                            )
                         }
-                        let result = try await group.next()!
-                        group.cancelAll()
-                        return result
+                    } else {
+                        // Auto/FullAuto: send immediately, with translation if languages differ
+                        guard let replyText = replyText else {
+                            self.sendFallbackReply(to: peerID, originalContent: originalContent, intent: intent, localLang: localLang)
+                            return
+                        }
+                        let peerLang = remoteCard?.ownerLocale ?? "en"
+                        let translated = await self.translateIfNeeded(engine: engine, text: replyText, from: localLang, to: peerLang)
+                        self.sendAgentMessage(to: peerID, content: replyText, translatedContent: translated,
+                                              intent: intent ?? Intent.messageChat.rawValue, isAutoReply: true)
+
+                        // AGENT_LOG: Record autonomous action (fullAuto mode especially)
+                        if trustMode == .fullAuto || trustMode == .auto {
+                            let peerName = remoteCard?.displayName ?? "Unknown"
+                            let logEntry = AgentActivityLog(
+                                id: UUID().uuidString,
+                                peerID: peerID.id,
+                                peerName: peerName,
+                                action: .autoReply,
+                                content: replyText,
+                                intent: intent,
+                                timestamp: Date()
+                            )
+                            MINATOAgentStore.shared.appendActivityLog(logEntry)
+                            // Also emit an AGENT_LOG packet to self for network-level audit (future feature)
+                        }
                     }
-                    SecureLogger.info("MINATO: Gemini replied (\(reply.count) chars)", category: .session)
-                    guard !reply.isEmpty else {
-                        self.sendFallbackReply(to: peerID, originalContent: originalContent, intent: intent, localLang: localLang)
-                        return
-                    }
-                    self.sendAgentMessage(
-                        to: peerID,
-                        content: reply,
-                        translatedContent: nil,
-                        intent: intent ?? Intent.messageChat.rawValue,
-                        isAutoReply: true
-                    )
                 } catch {
                     SecureLogger.warning("MINATO: AI error: \(error), using fallback", category: .session)
-                    self.sendFallbackReply(to: peerID, originalContent: originalContent, intent: intent, localLang: localLang)
+                    if requiresApproval {
+                        if MINATOAgentStore.shared.checkAndMarkInterimAck(to: peerID) {
+                            let ownerName = localCard.displayName
+                            let ack = localLang.hasPrefix("ja")
+                                ? "\(ownerName)に確認しますね！少々お待ちください。"
+                                : "Let me check with \(ownerName). Please wait a moment."
+                            self.sendAgentMessage(to: peerID, content: ack, translatedContent: nil,
+                                                  intent: intent ?? Intent.messageChat.rawValue, isAutoReply: true)
+                        }
+                        // No AI proposal available — owner will reply manually
+                        let peerName = remoteCard?.displayName ?? "Unknown"
+                        DispatchQueue.main.async { [weak self] in
+                            self?.delegate?.didReceiveAgentPendingReply(
+                                for: peerID,
+                                originalMessage: originalContent,
+                                proposedReply: nil,
+                                peerName: peerName
+                            )
+                        }
+                    } else {
+                        self.sendFallbackReply(to: peerID, originalContent: originalContent, intent: intent, localLang: localLang)
+                    }
                 }
             }
         } else {
             SecureLogger.info("MINATO: no AI engine, using fallback", category: .session)
-            sendFallbackReply(to: peerID, originalContent: originalContent, intent: intent, localLang: localLang)
+            if requiresApproval {
+                if MINATOAgentStore.shared.checkAndMarkInterimAck(to: peerID) {
+                    let ownerName = localCard.displayName
+                    let ack = localLang.hasPrefix("ja")
+                        ? "\(ownerName)に確認しますね！少々お待ちください。"
+                        : "Let me check with \(ownerName). Please wait a moment."
+                    sendAgentMessage(to: peerID, content: ack, translatedContent: nil,
+                                     intent: intent ?? Intent.messageChat.rawValue, isAutoReply: true)
+                }
+                let peerName = remoteCard?.displayName ?? "Unknown"
+                DispatchQueue.main.async { [weak self] in
+                    self?.delegate?.didReceiveAgentPendingReply(
+                        for: peerID,
+                        originalMessage: originalContent,
+                        proposedReply: nil,
+                        peerName: peerName
+                    )
+                }
+            } else {
+                sendFallbackReply(to: peerID, originalContent: originalContent, intent: intent, localLang: localLang)
+            }
+        }
+    }
+
+    /// Translates text if source and target locales differ. Returns nil if same language or on error.
+    private func translateIfNeeded(engine: AIEngine, text: String, from source: String, to target: String) async -> String? {
+        let sourceLang = String(source.prefix(2))
+        let targetLang = String(target.prefix(2))
+        guard sourceLang != targetLang else { return nil }
+        do {
+            let translated = try await engine.translateMessage(text, from: source, to: target)
+            SecureLogger.info("MINATO: translated (\(sourceLang)→\(targetLang)): \(translated.prefix(30))...", category: .session)
+            return translated.isEmpty ? nil : translated
+        } catch {
+            SecureLogger.warning("MINATO: translation failed: \(error)", category: .session)
+            return nil
         }
     }
 
@@ -246,10 +363,185 @@ extension BLEService {
         SecureLogger.info("Sent Agent Card to \(peerID.id.prefix(8))", category: .session)
     }
 
+    // MARK: - Message Classification
+
+    /// Low-stakes messages (greetings, short acks) that suggest mode can auto-send.
+    /// Plan mode always requires approval; this only applies to suggest mode.
+    static func isLowStakesMessage(_ content: String) -> Bool {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Very short messages (< 15 chars) are likely casual
+        if trimmed.count < 15 { return true }
+
+        let lower = trimmed.lowercased()
+        let casualPatterns = [
+            // Japanese greetings/acks
+            "こんにちは", "おはよう", "おやすみ", "ありがとう", "了解", "わかった", "ok", "はい", "いいえ",
+            "お疲れ", "よろしく", "じゃあね", "またね", "うん", "そう", "そうだね",
+            // English
+            "hi", "hello", "hey", "thanks", "thank you", "ok", "okay", "sure", "yes", "no",
+            "sounds good", "got it", "understood", "bye", "see you", "good morning", "good night"
+        ]
+        return casualPatterns.contains { lower == $0 || lower.hasPrefix($0 + " ") || lower.hasSuffix(" " + $0) }
+    }
+
     // MARK: - Ping
 
     private func handleAgentPing(_ packet: BitchatPacket, from senderID: PeerID) {
         SecureLogger.debug("AGENT_PING from \(senderID.id.prefix(8))", category: .session)
+    }
+
+    // MARK: - Schedule Negotiation Handlers
+
+    private func handleAgentRequest(_ packet: BitchatPacket, from senderID: PeerID) {
+        guard let payload = decodeMINATOPayload(packet.payload) else {
+            SecureLogger.warning("AGENT_REQUEST missing payload", category: .session)
+            return
+        }
+
+        let requestId = payload.payload.requestId ?? UUID().uuidString
+        let intent = payload.payload.intent
+        let action = payload.payload.action
+        let proposedEvent = payload.payload.proposedEvent
+        let content = payload.payload.translatedContent ?? payload.payload.content
+        let translatedContent = payload.payload.translatedContent
+
+        SecureLogger.info("AGENT_REQUEST [\(action ?? "?")] req=\(requestId.prefix(8)) from \(senderID.id.prefix(8))", category: .session)
+
+        // Track the negotiation
+        let negotiation = ScheduleNegotiation(
+            id: requestId,
+            peerID: senderID,
+            initiatedByLocal: false,
+            proposedEvent: proposedEvent,
+            state: .proposed,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        MINATOAgentStore.shared.addNegotiation(negotiation)
+
+        DispatchQueue.main.async { [weak self] in
+            self?.delegate?.didReceiveAgentRequest(
+                from: senderID,
+                requestId: requestId,
+                intent: intent,
+                action: action,
+                proposedEvent: proposedEvent,
+                content: content,
+                translatedContent: translatedContent,
+                timestamp: Date()
+            )
+        }
+    }
+
+    private func handleAgentResponse(_ packet: BitchatPacket, from senderID: PeerID) {
+        guard let payload = decodeMINATOPayload(packet.payload) else {
+            SecureLogger.warning("AGENT_RESPONSE missing payload", category: .session)
+            return
+        }
+
+        let requestId = payload.payload.requestId ?? "unknown"
+        let proposedEvent = payload.payload.proposedEvent
+        let content = payload.payload.translatedContent ?? payload.payload.content
+        let translatedContent = payload.payload.translatedContent
+        let status = payload.payload.status
+
+        SecureLogger.info("AGENT_RESPONSE req=\(requestId.prefix(8)) from \(senderID.id.prefix(8))", category: .session)
+
+        // Update negotiation state
+        if let event = proposedEvent {
+            MINATOAgentStore.shared.updateNegotiation(requestId: requestId, state: .counterOffered, event: event)
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.delegate?.didReceiveAgentResponse(
+                from: senderID,
+                requestId: requestId,
+                proposedEvent: proposedEvent,
+                content: content,
+                translatedContent: translatedContent,
+                status: status,
+                timestamp: Date()
+            )
+        }
+    }
+
+    private func handleAgentAck(_ packet: BitchatPacket, from senderID: PeerID) {
+        guard let payload = decodeMINATOPayload(packet.payload) else {
+            SecureLogger.warning("AGENT_ACK missing payload", category: .session)
+            return
+        }
+
+        let requestId = payload.payload.requestId ?? "unknown"
+        let status = payload.payload.status ?? "unknown"
+        let content = payload.payload.translatedContent ?? payload.payload.content
+        let translatedContent = payload.payload.translatedContent
+
+        SecureLogger.info("AGENT_ACK req=\(requestId.prefix(8)) status=\(status) from \(senderID.id.prefix(8))", category: .session)
+
+        // Update negotiation state
+        let newState: ScheduleNegotiation.State = status == "confirmed" ? .confirmed : .rejected
+        MINATOAgentStore.shared.updateNegotiation(requestId: requestId, state: newState)
+
+        DispatchQueue.main.async { [weak self] in
+            self?.delegate?.didReceiveAgentAck(
+                from: senderID,
+                requestId: requestId,
+                status: status,
+                content: content,
+                translatedContent: translatedContent,
+                timestamp: Date()
+            )
+        }
+    }
+
+    // MARK: - Send Schedule Messages
+
+    /// Sends an AGENT_REQUEST (e.g., schedule proposal).
+    func sendAgentRequest(to peerID: PeerID, requestId: String, intent: String, action: String, proposedEvent: ProposedEvent?, content: String?, translatedContent: String?) {
+        let payloadContent = PayloadContent(
+            intent: intent,
+            content: content,
+            originalLanguage: MINATOAgentStore.shared.localCard?.ownerLocale,
+            translatedContent: translatedContent,
+            status: nil, requestId: requestId, action: action, context: nil,
+            proposedEvent: proposedEvent, agentCard: nil
+        )
+
+        guard let encoded = encodeMINATOPacket(type: .agentRequest, payload: payloadContent, to: peerID) else { return }
+        sendMINATOPacket(encoded, directedTo: peerID)
+        SecureLogger.info("Sent AGENT_REQUEST [\(action)] req=\(requestId.prefix(8)) to \(peerID.id.prefix(8))", category: .session)
+    }
+
+    /// Sends an AGENT_RESPONSE (e.g., counter-proposal).
+    func sendAgentResponse(to peerID: PeerID, requestId: String, proposedEvent: ProposedEvent?, content: String?, translatedContent: String?, status: String?) {
+        let payloadContent = PayloadContent(
+            intent: Intent.scheduleNegotiate.rawValue,
+            content: content,
+            originalLanguage: MINATOAgentStore.shared.localCard?.ownerLocale,
+            translatedContent: translatedContent,
+            status: status, requestId: requestId, action: nil, context: nil,
+            proposedEvent: proposedEvent, agentCard: nil
+        )
+
+        guard let encoded = encodeMINATOPacket(type: .agentResponse, payload: payloadContent, to: peerID) else { return }
+        sendMINATOPacket(encoded, directedTo: peerID)
+        SecureLogger.info("Sent AGENT_RESPONSE req=\(requestId.prefix(8)) to \(peerID.id.prefix(8))", category: .session)
+    }
+
+    /// Sends an AGENT_ACK (confirm or reject).
+    func sendAgentAck(to peerID: PeerID, requestId: String, status: String, content: String?, translatedContent: String?) {
+        let payloadContent = PayloadContent(
+            intent: status == "confirmed" ? Intent.scheduleConfirm.rawValue : Intent.scheduleCancel.rawValue,
+            content: content,
+            originalLanguage: MINATOAgentStore.shared.localCard?.ownerLocale,
+            translatedContent: translatedContent,
+            status: status, requestId: requestId, action: nil, context: nil,
+            proposedEvent: nil, agentCard: nil
+        )
+
+        guard let encoded = encodeMINATOPacket(type: .agentAck, payload: payloadContent, to: peerID) else { return }
+        sendMINATOPacket(encoded, directedTo: peerID)
+        SecureLogger.info("Sent AGENT_ACK req=\(requestId.prefix(8)) status=\(status) to \(peerID.id.prefix(8))", category: .session)
     }
 
     // MARK: - Encode Helper
@@ -257,11 +549,17 @@ extension BLEService {
     func encodeMINATOPacket(type: MINATOMessageType, payload: PayloadContent, to peerID: PeerID?) -> Data? {
         guard let localCard = MINATOAgentStore.shared.localCard else { return nil }
 
+        // Resolve recipient npub from remote card (protocol spec §10 requires non-empty `to`)
+        let toNpub: String = {
+            guard let pid = peerID else { return "" }
+            return MINATOAgentStore.shared.remoteCard(for: pid)?.agentId ?? ""
+        }()
+
         let envelope = MINATOPayload(
             type: type.description,
             version: "0.1",
             from: localCard.agentId,
-            to: peerID.map { _ in "" } ?? "",
+            to: toNpub,
             timestamp: UInt64(Date().timeIntervalSince1970),
             nonce: UUID().uuidString,
             payload: payload,

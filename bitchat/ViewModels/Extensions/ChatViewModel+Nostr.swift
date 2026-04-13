@@ -866,37 +866,77 @@ extension ChatViewModel {
             return
         }
 
-        let content = minatoPayload.payload.translatedContent ?? minatoPayload.payload.content ?? ""
-        let intent = minatoPayload.payload.intent
+        let p = minatoPayload.payload
+        let content = p.translatedContent ?? p.content ?? ""
+        let intent = p.intent
 
         SecureLogger.info("MINATO via Nostr: \(minatoPayload.type) from \(senderPubkey.prefix(8))", category: .session)
 
-        // Display in chat UI using the same delegate path as BLE
-        didReceiveAgentMessage(
-            from: convKey,
-            content: content,
-            translatedContent: minatoPayload.payload.translatedContent,
-            intent: intent,
-            timestamp: timestamp
-        )
+        // Dispatch based on MINATO message type
+        let messageType = MINATOMessageType(rawValue: packet.type)
 
-        // Dummy agent auto-reply (same as BLE path, but only for non-auto-replies)
-        let isAutoReply: Bool = {
-            if let ctx = minatoPayload.payload.context,
-               case .bool(let val) = ctx["auto_reply"] {
-                return val
-            }
-            return false
-        }()
-
-        if !isAutoReply, let bleService = meshService as? BLEService {
-            // Use BLE send if peer is nearby, otherwise Nostr
-            let originalContent = minatoPayload.payload.content ?? content
-            bleService.sendDummyReplyViaNostr(
-                to: convKey,
-                originalContent: originalContent,
-                intent: intent
+        switch messageType {
+        case .agentRequest:
+            let requestId = p.requestId ?? UUID().uuidString
+            // Track negotiation
+            let negotiation = ScheduleNegotiation(
+                id: requestId, peerID: convKey, initiatedByLocal: false,
+                proposedEvent: p.proposedEvent, state: .proposed,
+                createdAt: Date(), updatedAt: Date()
             )
+            MINATOAgentStore.shared.addNegotiation(negotiation)
+
+            didReceiveAgentRequest(
+                from: convKey, requestId: requestId, intent: intent,
+                action: p.action, proposedEvent: p.proposedEvent,
+                content: p.content, translatedContent: p.translatedContent,
+                timestamp: timestamp
+            )
+
+        case .agentResponse:
+            let requestId = p.requestId ?? "unknown"
+            if let event = p.proposedEvent {
+                MINATOAgentStore.shared.updateNegotiation(requestId: requestId, state: .counterOffered, event: event)
+            }
+            didReceiveAgentResponse(
+                from: convKey, requestId: requestId,
+                proposedEvent: p.proposedEvent, content: p.content,
+                translatedContent: p.translatedContent, status: p.status,
+                timestamp: timestamp
+            )
+
+        case .agentAck:
+            let requestId = p.requestId ?? "unknown"
+            let status = p.status ?? "unknown"
+            let newState: ScheduleNegotiation.State = status == "confirmed" ? .confirmed : .rejected
+            MINATOAgentStore.shared.updateNegotiation(requestId: requestId, state: newState)
+
+            didReceiveAgentAck(
+                from: convKey, requestId: requestId, status: status,
+                content: p.content, translatedContent: p.translatedContent,
+                timestamp: timestamp
+            )
+
+        default:
+            // AGENT_MESSAGE and other types: display in chat + auto-reply
+            didReceiveAgentMessage(
+                from: convKey,
+                content: content,
+                translatedContent: p.translatedContent,
+                intent: intent,
+                timestamp: timestamp
+            )
+
+            // Auto-reply only to human-originated messages
+            let isAutoReply: Bool = {
+                if let ctx = p.context, case .bool(let val) = ctx["auto_reply"] { return val }
+                return false
+            }()
+
+            if !isAutoReply, let bleService = meshService as? BLEService {
+                let originalContent = p.content ?? content
+                bleService.sendDummyReplyViaNostr(to: convKey, originalContent: originalContent, intent: intent)
+            }
         }
     }
 }

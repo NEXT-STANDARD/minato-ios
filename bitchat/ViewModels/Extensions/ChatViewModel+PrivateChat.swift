@@ -44,7 +44,27 @@ extension ChatViewModel {
 
         // MINATO agent routing: if we have an Agent Card for this peer, use MINATO protocol
         if MINATOAgentStore.shared.remoteCard(for: peerID) != nil {
-            sendAgentMessage(content, to: peerID)
+            // Detect schedule intent → route to structured schedule flow
+            if Self.hasScheduleIntent(content) {
+                // Check for @mentions of additional MINATO peers → group schedule
+                let mentions = parseMentions(from: content)
+                if !mentions.isEmpty {
+                    let resolved = resolvePeerIDsForMentions(mentions)
+                    // Union: include current DM peer + mentioned peers (deduplicated)
+                    var invitees = resolved
+                    if !invitees.contains(where: { $0.peerID == peerID }) {
+                        let name = MINATOAgentStore.shared.remoteCard(for: peerID)?.displayName ?? "peer"
+                        invitees.insert((peerID, name), at: 0)
+                    }
+                    if invitees.count >= 2 {
+                        sendGroupScheduleRequest(content, to: invitees, in: peerID)
+                        return
+                    }
+                }
+                sendScheduleRequest(content, to: peerID)
+            } else {
+                sendAgentMessage(content, to: peerID)
+            }
             return
         }
         
