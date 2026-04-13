@@ -1,7 +1,11 @@
 import BitLogger
 import Foundation
 
-// MARK: - Pending Reply
+// MARK: - Shared Model Types
+//
+// These types are referenced by the sub-stores under `Stores/` as well as
+// by ViewModels/Views. They stay at file scope here so the public MINATO
+// surface keeps a single home for protocol-level value types.
 
 /// A reply proposed by the AI engine that awaits owner approval.
 /// Used in Apprentice (plan) and Partner (suggest) trust modes.
@@ -13,8 +17,6 @@ struct PendingReply {
     let intent: String?
     let createdAt: Date
 }
-
-// MARK: - Schedule Negotiation
 
 /// Tracks the lifecycle of a schedule negotiation (REQUEST → RESPONSE → ACK chain).
 struct ScheduleNegotiation {
@@ -94,34 +96,42 @@ struct PendingScheduleApproval {
     var hasConflict: Bool = false
 }
 
-// MARK: - Persistence Wrappers
+// MARK: - MINATO Agent Store (facade)
 
-/// Wrapper for serializing remote cards with their peer ID association.
-private struct RemoteCardEntry: Codable {
-    let peerIDHex: String
-    let card: AgentCard
-}
-
-// MARK: - MINATO Agent Store
-
-/// Manages the local Agent Card and known remote Agent Cards.
-/// Thread-safe singleton for agent identity and peer card storage.
-/// Persists local card, remote cards, and trust settings to Keychain.
+/// Public entry point for the MINATO agent state layer.
+///
+/// Under the hood, responsibilities are split across four focused stores
+/// (see `Stores/`):
+///
+/// - ``AgentIdentityStore`` — local & remote Agent Cards, handshake tracking
+/// - ``TrustStore``         — per-npub trust settings, interim ACK throttle
+/// - ``NegotiationStore``   — in-flight schedule negotiations & pending approvals
+/// - ``ActivityLogStore``   — full_auto audit trail
+///
+/// This class remains as a stable thin facade so existing call sites
+/// (`MINATOAgentStore.shared.localCard`, etc.) keep working unchanged.
+/// New code is free to call the sub-stores directly where the coupling is
+/// already clear.
 final class MINATOAgentStore {
     static let shared = MINATOAgentStore()
 
-    // MARK: - Persistence Keys
-    private static let keychainService = "minato.agentstore"
-    private static let localCardKey = "local_card"
-    private static let remoteCardsKey = "remote_cards"
-    private static let trustSettingsKey = "trust_settings"
+    // MARK: - Sub-stores
 
-    private let keychain: KeychainManagerProtocol
-    private let queue = DispatchQueue(label: "minato.agentstore", attributes: .concurrent)
-    private var _localCard: AgentCard?
-    private var _remoteCards: [String: AgentCard] = [:]  // PeerID hex → AgentCard
-    private var _exchangedPeers: Set<String> = []        // PeerID hex set
-    private var _trustSettings: [String: TrustSettings] = [:]  // npub → TrustSettings
+    let identity: AgentIdentityStore
+    let trust: TrustStore
+    let negotiation: NegotiationStore
+    let log: ActivityLogStore
+
+    // MARK: - Notifications (re-exported from AgentIdentityStore)
+
+    static var localCardDidSetNotification: Notification.Name {
+        AgentIdentityStore.localCardDidSetNotification
+    }
+    static var firstHandshakeCompletedNotification: Notification.Name {
+        AgentIdentityStore.firstHandshakeCompletedNotification
+    }
+
+    // MARK: - App-level dependencies
 
     /// The AI engine for generating responses. Set at app launch.
     private(set) var aiEngine: AIEngine?
@@ -139,424 +149,146 @@ final class MINATOAgentStore {
         calendarAdapter = adapter
     }
 
-    private init(keychain: KeychainManagerProtocol = KeychainManager()) {
-        self.keychain = keychain
-        loadAll()
-    }
+    private init(
+        identity: AgentIdentityStore = .shared,
+        trust: TrustStore = .shared,
+        negotiation: NegotiationStore = .shared,
+        log: ActivityLogStore = .shared
+    ) {
+        self.identity = identity
+        self.trust = trust
+        self.negotiation = negotiation
+        self.log = log
 
-    // MARK: - Local Card
-
-    /// The local agent's card. Must be set before any MINATO communication.
-    var localCard: AgentCard? {
-        queue.sync { _localCard }
-    }
-
-    /// Notification posted when the local Agent Card is first set (for deferred handshakes).
-    static let localCardDidSetNotification = Notification.Name("MINATOLocalCardDidSet")
-
-    /// Notification posted when the first-ever MINATO handshake completes (for onboarding).
-    static let firstHandshakeCompletedNotification = Notification.Name("MINATOFirstHandshakeCompleted")
-
-    /// Sets the local Agent Card (typically at app launch).
-    func setLocalCard(_ card: AgentCard) {
-        queue.async(flags: .barrier) {
-            let wasNil = self._localCard == nil
-            self._localCard = card
-            self.persistLocalCard(card)
-            if wasNil {
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: Self.localCardDidSetNotification, object: nil)
-                }
-            }
+        // Wire identity → trust so that whenever a new remote Agent Card
+        // introduces an agentId we've never seen, TrustStore seeds default
+        // settings for it. (Previously both updates lived under a single
+        // barrier inside the monolithic store.)
+        identity.onNewAgentIdObserved = { [weak trust] agentId in
+            trust?.ensureDefaultSettings(for: agentId)
         }
     }
 
-    // MARK: - Remote Cards
+    // MARK: - Identity facade
 
-    /// Saves a remote peer's Agent Card.
+    var localCard: AgentCard? { identity.localCard }
+
+    func setLocalCard(_ card: AgentCard) { identity.setLocalCard(card) }
+
     func saveRemoteCard(_ card: AgentCard, for peerID: PeerID) {
-        var isFirstEverRemoteCard = false
-        queue.sync(flags: .barrier) {
-            isFirstEverRemoteCard = self._remoteCards.isEmpty
-            self._remoteCards[peerID.id] = card
-            // Initialize trust settings if first encounter
-            if self._trustSettings[card.agentId] == nil {
-                self._trustSettings[card.agentId] = TrustSettings.defaultSettings()
-                self.persistTrustSettings(self._trustSettings)
-            }
-            self.persistRemoteCards(self._remoteCards)
-        }
-        // Post first-handshake notification (for onboarding) outside the barrier
-        if isFirstEverRemoteCard {
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(
-                    name: Self.firstHandshakeCompletedNotification,
-                    object: nil,
-                    userInfo: ["peerName": card.displayName, "peerID": peerID.id]
-                )
-            }
-        }
+        identity.saveRemoteCard(card, for: peerID)
     }
 
-    /// Retrieves the Agent Card for a known peer.
-    func remoteCard(for peerID: PeerID) -> AgentCard? {
-        queue.sync { _remoteCards[peerID.id] }
-    }
+    func remoteCard(for peerID: PeerID) -> AgentCard? { identity.remoteCard(for: peerID) }
 
-    /// Removes a remote peer's Agent Card (on revoke or disconnect).
-    func removeRemoteCard(for peerID: PeerID) {
-        queue.async(flags: .barrier) {
-            self._remoteCards.removeValue(forKey: peerID.id)
-            self._exchangedPeers.remove(peerID.id)
-            self.persistRemoteCards(self._remoteCards)
-        }
-    }
+    func removeRemoteCard(for peerID: PeerID) { identity.removeRemoteCard(for: peerID) }
 
-    /// All known remote Agent Cards.
-    var allRemoteCards: [String: AgentCard] {
-        queue.sync { _remoteCards }
-    }
+    var allRemoteCards: [String: AgentCard] { identity.allRemoteCards }
 
-    /// Finds a remote card by any peerID format (short 16-hex or full 64-hex Noise key).
-    /// Falls back to prefix matching if the provided ID is longer than stored keys.
     func findRemoteCard(for peerID: PeerID) -> (peerID: PeerID, card: AgentCard)? {
-        return queue.sync {
-            // Direct match
-            if let card = _remoteCards[peerID.id] {
-                return (peerID, card)
-            }
-            // If the lookup key is a full 64-hex Noise key, try prefix match (first 16 hex)
-            if peerID.id.count == 64 {
-                let shortPrefix = String(peerID.id.prefix(16))
-                if let card = _remoteCards[shortPrefix] {
-                    return (PeerID(str: shortPrefix), card)
-                }
-            }
-            // If the lookup key is short, try finding a full key that starts with it
-            if peerID.id.count == 16 {
-                for (key, card) in _remoteCards where key.hasPrefix(peerID.id) || peerID.id.hasPrefix(key) {
-                    return (PeerID(str: key), card)
-                }
-            }
-            return nil
-        }
+        identity.findRemoteCard(for: peerID)
     }
 
-    // MARK: - Handshake Tracking
+    func hasExchangedWith(_ peerID: PeerID) -> Bool { identity.hasExchangedWith(peerID) }
 
-    /// Whether we've already exchanged Agent Cards with this peer.
-    func hasExchangedWith(_ peerID: PeerID) -> Bool {
-        queue.sync { _exchangedPeers.contains(peerID.id) }
-    }
+    func markExchanged(_ peerID: PeerID) { identity.markExchanged(peerID) }
 
-    /// Mark a peer as having completed the Agent Card exchange.
-    func markExchanged(_ peerID: PeerID) {
-        queue.async(flags: .barrier) {
-            self._exchangedPeers.insert(peerID.id)
-        }
-    }
+    // MARK: - Trust facade
 
-    // MARK: - Trust Settings
+    func trustSettings(for npub: String) -> TrustSettings? { trust.trustSettings(for: npub) }
 
-    /// Gets trust settings for a peer by their npub.
-    func trustSettings(for npub: String) -> TrustSettings? {
-        queue.sync { _trustSettings[npub] }
-    }
-
-    /// Updates trust settings for a peer.
     func updateTrustSettings(_ settings: TrustSettings, for npub: String) {
-        queue.async(flags: .barrier) {
-            self._trustSettings[npub] = settings
-            self.persistTrustSettings(self._trustSettings)
-        }
+        trust.updateTrustSettings(settings, for: npub)
     }
 
-    // MARK: - Pending Replies
-
-    private var _pendingReplies: [String: PendingReply] = [:]  // PeerID hex → PendingReply
-
-    /// Stores a pending reply for owner approval.
-    func addPendingReply(_ reply: PendingReply) {
-        queue.async(flags: .barrier) {
-            self._pendingReplies[reply.peerID.id] = reply
-        }
-    }
-
-    /// Retrieves the pending reply for a peer, if any.
-    func pendingReply(for peerID: PeerID) -> PendingReply? {
-        queue.sync { _pendingReplies[peerID.id] }
-    }
-
-    /// Removes the pending reply for a peer.
-    func removePendingReply(for peerID: PeerID) {
-        queue.async(flags: .barrier) {
-            self._pendingReplies.removeValue(forKey: peerID.id)
-        }
-    }
-
-    // MARK: - Interim ACK Throttling
-
-    private var _recentAckPeers: [String: Date] = [:]  // peerID hex → last ACK time
-
-    /// Atomically checks whether an interim ACK should be sent AND marks it as sent if so.
-    /// Prevents TOCTOU race where concurrent callers both pass the check before either marks.
     func checkAndMarkInterimAck(to peerID: PeerID) -> Bool {
-        return queue.sync(flags: .barrier) {
-            // Prune stale entries (older than 5 min) while we're here
-            let now = Date()
-            _recentAckPeers = _recentAckPeers.filter { now.timeIntervalSince($0.value) < 300 }
-
-            if let lastAck = _recentAckPeers[peerID.id],
-               now.timeIntervalSince(lastAck) < 300 {
-                return false
-            }
-            _recentAckPeers[peerID.id] = now
-            return true
-        }
+        trust.checkAndMarkInterimAck(to: peerID)
     }
 
-    /// Legacy: checks without marking. Prefer `checkAndMarkInterimAck` to avoid TOCTOU race.
     func shouldSendInterimAck(to peerID: PeerID) -> Bool {
-        return queue.sync {
-            if let lastAck = _recentAckPeers[peerID.id],
-               Date().timeIntervalSince(lastAck) < 300 {
-                return false
-            }
-            return true
-        }
+        trust.shouldSendInterimAck(to: peerID)
     }
 
-    /// Record that an interim ACK was sent to this peer.
-    func markInterimAckSent(to peerID: PeerID) {
-        queue.async(flags: .barrier) {
-            self._recentAckPeers[peerID.id] = Date()
-        }
+    func markInterimAckSent(to peerID: PeerID) { trust.markInterimAckSent(to: peerID) }
+
+    // MARK: - Negotiation facade (pending replies)
+
+    func addPendingReply(_ reply: PendingReply) { negotiation.addPendingReply(reply) }
+
+    func pendingReply(for peerID: PeerID) -> PendingReply? {
+        negotiation.pendingReply(for: peerID)
     }
 
-    // MARK: - Schedule Negotiations
+    func removePendingReply(for peerID: PeerID) { negotiation.removePendingReply(for: peerID) }
 
-    private var _activeNegotiations: [String: ScheduleNegotiation] = [:]  // requestId → negotiation
+    // MARK: - Negotiation facade (1:1)
 
-    /// Starts tracking a new schedule negotiation.
-    func addNegotiation(_ negotiation: ScheduleNegotiation) {
-        queue.async(flags: .barrier) {
-            self._activeNegotiations[negotiation.id] = negotiation
-        }
-    }
+    func addNegotiation(_ n: ScheduleNegotiation) { negotiation.addNegotiation(n) }
 
-    /// Retrieves an active negotiation by request ID.
     func negotiation(for requestId: String) -> ScheduleNegotiation? {
-        queue.sync { _activeNegotiations[requestId] }
+        negotiation.negotiation(for: requestId)
     }
 
-    /// Updates the state and optionally the proposed event of a negotiation.
     func updateNegotiation(requestId: String, state: ScheduleNegotiation.State, event: ProposedEvent? = nil) {
-        queue.async(flags: .barrier) {
-            guard var neg = self._activeNegotiations[requestId] else { return }
-            neg.state = state
-            neg.updatedAt = Date()
-            if let event { neg.proposedEvent = event }
-            self._activeNegotiations[requestId] = neg
-        }
+        negotiation.updateNegotiation(requestId: requestId, state: state, event: event)
     }
 
-    /// Removes a completed or cancelled negotiation.
-    func removeNegotiation(requestId: String) {
-        queue.async(flags: .barrier) {
-            self._activeNegotiations.removeValue(forKey: requestId)
-        }
-    }
+    func removeNegotiation(requestId: String) { negotiation.removeNegotiation(requestId: requestId) }
 
-    /// All active negotiations.
-    var allNegotiations: [String: ScheduleNegotiation] {
-        queue.sync { _activeNegotiations }
-    }
+    var allNegotiations: [String: ScheduleNegotiation] { negotiation.allNegotiations }
 
-    /// Remove negotiations older than 24 hours (called periodically).
     func pruneStaleNegotiations(olderThan seconds: TimeInterval = 86400) {
-        queue.async(flags: .barrier) {
-            let now = Date()
-            self._activeNegotiations = self._activeNegotiations.filter {
-                now.timeIntervalSince($0.value.updatedAt) < seconds
-            }
-            self._activeGroupNegotiations = self._activeGroupNegotiations.filter {
-                now.timeIntervalSince($0.value.updatedAt) < seconds
-            }
-        }
+        negotiation.pruneStale(olderThan: seconds)
     }
 
-    // MARK: - Group Schedule Negotiations
+    // MARK: - Negotiation facade (group)
 
-    private var _activeGroupNegotiations: [String: GroupScheduleNegotiation] = [:]  // requestId → group
-
-    /// Starts tracking a new group schedule negotiation.
     func addGroupNegotiation(_ group: GroupScheduleNegotiation) {
-        queue.async(flags: .barrier) {
-            self._activeGroupNegotiations[group.id] = group
-        }
+        negotiation.addGroupNegotiation(group)
     }
 
-    /// Retrieves an active group negotiation by request ID.
     func groupNegotiation(for requestId: String) -> GroupScheduleNegotiation? {
-        queue.sync { _activeGroupNegotiations[requestId] }
+        negotiation.groupNegotiation(for: requestId)
     }
 
-    /// Updates a specific peer's response in a group negotiation.
-    /// Returns the updated group (post-update) if it exists.
     @discardableResult
     func updateGroupResponse(requestId: String, peerID: PeerID, response: GroupScheduleNegotiation.PeerResponse) -> GroupScheduleNegotiation? {
-        return queue.sync(flags: .barrier) {
-            guard var group = _activeGroupNegotiations[requestId] else { return nil }
-            group.responses[peerID.id] = response
-            group.updatedAt = Date()
-            _activeGroupNegotiations[requestId] = group
-            return group
-        }
+        negotiation.updateGroupResponse(requestId: requestId, peerID: peerID, response: response)
     }
 
-    /// Mark calendar as registered to prevent double-registration.
     func markGroupCalendarRegistered(requestId: String) {
-        queue.async(flags: .barrier) {
-            guard var group = self._activeGroupNegotiations[requestId] else { return }
-            group.calendarRegistered = true
-            self._activeGroupNegotiations[requestId] = group
-        }
+        negotiation.markGroupCalendarRegistered(requestId: requestId)
     }
 
-    /// All active group negotiations.
     var allGroupNegotiations: [String: GroupScheduleNegotiation] {
-        queue.sync { _activeGroupNegotiations }
+        negotiation.allGroupNegotiations
     }
 
     func removeGroupNegotiation(requestId: String) {
-        queue.async(flags: .barrier) {
-            self._activeGroupNegotiations.removeValue(forKey: requestId)
-        }
+        negotiation.removeGroupNegotiation(requestId: requestId)
     }
 
-    // MARK: - Activity Log (full_auto mode audit trail)
+    // MARK: - Negotiation facade (pending schedule approvals)
 
-    private static let activityLogKey = "activity_log"
-    private static let activityLogMaxEntries = 200
-
-    private var _activityLog: [AgentActivityLog] = []  // newest first
-
-    /// All activity log entries (newest first).
-    var activityLog: [AgentActivityLog] {
-        queue.sync { _activityLog }
-    }
-
-    /// Append a new activity log entry. Persists to Keychain automatically.
-    func appendActivityLog(_ entry: AgentActivityLog) {
-        queue.async(flags: .barrier) {
-            self._activityLog.insert(entry, at: 0)
-            if self._activityLog.count > Self.activityLogMaxEntries {
-                self._activityLog = Array(self._activityLog.prefix(Self.activityLogMaxEntries))
-            }
-            self.persistActivityLog(self._activityLog)
-        }
-    }
-
-    /// Activity log entries for a specific peer (newest first).
-    func activityLog(for peerID: PeerID) -> [AgentActivityLog] {
-        queue.sync { _activityLog.filter { $0.peerID == peerID.id } }
-    }
-
-    /// Clear the activity log.
-    func clearActivityLog() {
-        queue.async(flags: .barrier) {
-            self._activityLog = []
-            self.persistActivityLog([])
-        }
-    }
-
-    private func persistActivityLog(_ log: [AgentActivityLog]) {
-        guard let data = try? Self.encoder.encode(log) else { return }
-        keychain.save(key: Self.activityLogKey, data: data, service: Self.keychainService, accessible: nil)
-    }
-
-    // MARK: - Pending Schedule Approvals
-
-    private var _pendingScheduleApprovals: [String: PendingScheduleApproval] = [:]  // requestId → approval
-
-    /// Stores a schedule proposal awaiting owner action.
     func addPendingScheduleApproval(_ approval: PendingScheduleApproval) {
-        queue.async(flags: .barrier) {
-            self._pendingScheduleApprovals[approval.requestId] = approval
-        }
+        negotiation.addPendingScheduleApproval(approval)
     }
 
-    /// Retrieves pending schedule approval by request ID.
     func pendingScheduleApproval(for requestId: String) -> PendingScheduleApproval? {
-        queue.sync { _pendingScheduleApprovals[requestId] }
+        negotiation.pendingScheduleApproval(for: requestId)
     }
 
-    /// Removes a pending schedule approval.
     func removePendingScheduleApproval(for requestId: String) {
-        queue.async(flags: .barrier) {
-            self._pendingScheduleApprovals.removeValue(forKey: requestId)
-        }
+        negotiation.removePendingScheduleApproval(for: requestId)
     }
 
-    // MARK: - Persistence
+    // MARK: - Activity Log facade
 
-    private static let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        e.outputFormatting = [.sortedKeys]
-        return e
-    }()
+    var activityLog: [AgentActivityLog] { log.activityLog }
 
-    private static let decoder = JSONDecoder()
+    func appendActivityLog(_ entry: AgentActivityLog) { log.appendActivityLog(entry) }
 
-    /// Load all persisted data from Keychain on init.
-    private func loadAll() {
-        // Local card
-        if let data = keychain.load(key: Self.localCardKey, service: Self.keychainService),
-           let card = try? Self.decoder.decode(AgentCard.self, from: data) {
-            _localCard = card
-            SecureLogger.info("MINATO: restored local Agent Card (\(card.displayName))", category: .session)
-        }
+    func activityLog(for peerID: PeerID) -> [AgentActivityLog] { log.activityLog(for: peerID) }
 
-        // Remote cards (restore cards but NOT exchangedPeers — always re-handshake on reconnect)
-        if let data = keychain.load(key: Self.remoteCardsKey, service: Self.keychainService),
-           let entries = try? Self.decoder.decode([RemoteCardEntry].self, from: data) {
-            for entry in entries {
-                _remoteCards[entry.peerIDHex] = entry.card
-            }
-            SecureLogger.info("MINATO: restored \(entries.count) remote Agent Card(s)", category: .session)
-        }
-
-        // Trust settings
-        if let data = keychain.load(key: Self.trustSettingsKey, service: Self.keychainService),
-           let settings = try? Self.decoder.decode([String: TrustSettings].self, from: data) {
-            _trustSettings = settings
-            SecureLogger.info("MINATO: restored \(settings.count) trust setting(s)", category: .session)
-        }
-
-        // Activity log
-        if let data = keychain.load(key: Self.activityLogKey, service: Self.keychainService),
-           let log = try? Self.decoder.decode([AgentActivityLog].self, from: data) {
-            _activityLog = log
-            SecureLogger.info("MINATO: restored \(log.count) activity log entry/entries", category: .session)
-        }
-    }
-
-    /// Persist the local Agent Card.
-    private func persistLocalCard(_ card: AgentCard) {
-        guard let data = try? Self.encoder.encode(card) else { return }
-        keychain.save(key: Self.localCardKey, data: data, service: Self.keychainService, accessible: nil)
-    }
-
-    /// Persist all remote Agent Cards.
-    private func persistRemoteCards(_ cards: [String: AgentCard]) {
-        let entries = cards.map { RemoteCardEntry(peerIDHex: $0.key, card: $0.value) }
-        guard let data = try? Self.encoder.encode(entries) else { return }
-        keychain.save(key: Self.remoteCardsKey, data: data, service: Self.keychainService, accessible: nil)
-    }
-
-    /// Persist all trust settings.
-    private func persistTrustSettings(_ settings: [String: TrustSettings]) {
-        guard let data = try? Self.encoder.encode(settings) else { return }
-        keychain.save(key: Self.trustSettingsKey, data: data, service: Self.keychainService, accessible: nil)
-    }
+    func clearActivityLog() { log.clearActivityLog() }
 }
