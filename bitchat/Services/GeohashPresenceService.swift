@@ -80,7 +80,14 @@ final class GeohashPresenceService: ObservableObject {
         self.torReadyPublisher = NotificationCenter.default.publisher(for: .TorDidBecomeReady)
             .map { _ in () }
             .eraseToAnyPublisher()
-        self.torIsReady = { TorManager.shared.isReady }
+        // Mirror TorManager.networkPermitted semantics so clearnet-bypass
+        // dev builds don't stall heartbeats waiting for a Tor bootstrap
+        // that will never complete (e.g. on iOS Simulator). In production
+        // torEnforced is true, so this collapses to `isReady` — unchanged.
+        self.torIsReady = {
+            let mgr = TorManager.shared
+            return mgr.torEnforced ? mgr.isReady : true
+        }
         self.torIsForeground = { TorManager.shared.isForeground() }
         self.deriveIdentity = { try idBridge.deriveIdentity(forGeohash: $0) }
         self.relayLookup = { geohash, count in
