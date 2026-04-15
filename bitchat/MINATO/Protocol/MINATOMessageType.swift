@@ -57,6 +57,30 @@ struct MINATOPayload: Codable {
     enum CodingKeys: String, CodingKey {
         case type, version, from, to, timestamp, nonce, payload, signature
     }
+
+    /// Returns the canonical bytes to sign or verify: sorted-keys JSON with `signature` excluded.
+    /// See MINATO_PROTOCOL.md §4 — Signature Canonical Form.
+    func signaturePayloadData() -> Data? {
+        let unsigned = MINATOPayload(
+            type: type, version: version,
+            from: from, to: to,
+            timestamp: timestamp, nonce: nonce,
+            payload: payload, signature: nil
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try? encoder.encode(unsigned)
+    }
+
+    /// Returns a new MINATOPayload with the given Ed25519 signature applied.
+    func withSignature(_ signatureHex: String) -> MINATOPayload {
+        MINATOPayload(
+            type: type, version: version,
+            from: from, to: to,
+            timestamp: timestamp, nonce: nonce,
+            payload: payload, signature: signatureHex
+        )
+    }
 }
 
 /// Type-specific payload content, determined by the message type.

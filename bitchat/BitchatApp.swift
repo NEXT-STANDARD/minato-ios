@@ -62,20 +62,26 @@ struct BitchatApp: App {
                     appDelegate.chatViewModel = chatViewModel
 
                     // Initialize MINATO Agent Card and AI Engine
+                    let noiseService = chatViewModel.meshService.getNoiseService()
                     DispatchQueue.global(qos: .utility).async {
                         if let npub = try? idBridge.getCurrentNostrIdentity()?.npub {
                             let store = MINATOAgentStore.shared
 
-                            // Use persisted card if identity matches; otherwise create fresh
-                            if let existing = store.localCard, existing.agentId == npub {
+                            // Use persisted card if identity and ed25519_pub_key match; otherwise create fresh
+                            let ed25519PubKeyHex = noiseService.getSigningPublicKeyData().hexEncodedString()
+                            if let existing = store.localCard,
+                               existing.agentId == npub,
+                               existing.ed25519PubKey == ed25519PubKeyHex {
                                 // Persisted card is valid — skip recreation
                             } else {
                                 let aiEngineId = GeminiAPIKey.default != nil ? "gemini" : "none"
-                                let card = AgentCard.create(
+                                let unsigned = AgentCard.create(
                                     agentId: npub,
                                     displayName: chatViewModel.nickname,
-                                    aiEngine: aiEngineId
+                                    aiEngine: aiEngineId,
+                                    ed25519PubKey: ed25519PubKeyHex
                                 )
+                                let card = MINATOSigning.sign(unsigned, using: noiseService)
                                 store.setLocalCard(card)
                             }
 

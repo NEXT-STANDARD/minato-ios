@@ -156,12 +156,15 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
             }
             // Update MINATO Agent Card displayName when nickname changes
             if let existing = MINATOAgentStore.shared.localCard, !trimmed.isEmpty, existing.displayName != trimmed {
-                let updated = AgentCard.create(
+                let noiseService = meshService.getNoiseService()
+                let unsigned = AgentCard.create(
                     agentId: existing.agentId,
                     displayName: trimmed,
                     ownerLocale: existing.ownerLocale,
-                    aiEngine: existing.aiEngine
+                    aiEngine: existing.aiEngine,
+                    ed25519PubKey: noiseService.getSigningPublicKeyData().hexEncodedString()
                 )
+                let updated = MINATOSigning.sign(unsigned, using: noiseService)
                 MINATOAgentStore.shared.setLocalCard(updated)
             }
         }

@@ -7,7 +7,7 @@ import Foundation
 /// See: MINATO_PROTOCOL.md §4
 struct AgentCard: Codable, Equatable {
     let minatoVersion: String         // Protocol version (e.g., "0.1")
-    let agentId: String               // Nostr public key (npub format)
+    let agentId: String               // Nostr public key (npub format, secp256k1)
     let displayName: String           // User-configured agent name
     let ownerLocale: String           // Owner's primary language (BCP 47)
     let capabilities: [String]        // Permitted operations
@@ -15,7 +15,8 @@ struct AgentCard: Codable, Equatable {
     let supportedIntents: [String]    // Supported intents
     let aiEngine: String              // AI engine in use (informational)
     let createdAt: UInt64             // Unix timestamp
-    let signature: String?            // Ed25519 signature
+    let ed25519PubKey: String?        // Ed25519 public key (32 bytes, hex) for signature verification
+    let signature: String?            // Ed25519 signature over this card (anti-spoofing)
 
     enum CodingKeys: String, CodingKey {
         case capabilities, signature
@@ -27,6 +28,7 @@ struct AgentCard: Codable, Equatable {
         case supportedIntents = "supported_intents"
         case aiEngine = "ai_engine"
         case createdAt = "created_at"
+        case ed25519PubKey = "ed25519_pub_key"
     }
 }
 
@@ -42,7 +44,8 @@ extension AgentCard {
         capabilities: [Capability] = Capability.defaults,
         defaultTrustMode: TrustMode = .suggest,
         supportedIntents: [Intent] = Intent.defaults,
-        aiEngine: String = "claude"
+        aiEngine: String = "claude",
+        ed25519PubKey: String? = nil
     ) -> AgentCard {
         AgentCard(
             minatoVersion: "0.1",
@@ -54,6 +57,7 @@ extension AgentCard {
             supportedIntents: supportedIntents.map(\.rawValue),
             aiEngine: aiEngine,
             createdAt: UInt64(Date().timeIntervalSince1970),
+            ed25519PubKey: ed25519PubKey,
             signature: nil
         )
     }
@@ -70,11 +74,33 @@ extension AgentCard {
             supportedIntents: supportedIntents,
             aiEngine: aiEngine,
             createdAt: createdAt,
+            ed25519PubKey: ed25519PubKey,
             signature: signatureHex
         )
     }
 
-    /// Serializes the Agent Card to JSON Data (for signing and transport).
+    /// Returns the canonical bytes to sign or verify: sorted-keys JSON with `signature` excluded.
+    /// See MINATO_PROTOCOL.md §4 — Signature Canonical Form.
+    func signaturePayloadData() -> Data? {
+        let unsigned = AgentCard(
+            minatoVersion: minatoVersion,
+            agentId: agentId,
+            displayName: displayName,
+            ownerLocale: ownerLocale,
+            capabilities: capabilities,
+            defaultTrustMode: defaultTrustMode,
+            supportedIntents: supportedIntents,
+            aiEngine: aiEngine,
+            createdAt: createdAt,
+            ed25519PubKey: ed25519PubKey,
+            signature: nil
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try? encoder.encode(unsigned)
+    }
+
+    /// Serializes the Agent Card to JSON Data (for transport).
     func toJSON() -> Data? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]

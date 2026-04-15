@@ -12,6 +12,21 @@ extension BLEService {
             return
         }
 
+        // Non-handshake packets must have a verified envelope signature.
+        // Handshake verification happens inside handleAgentHandshake (AgentCard self-sig).
+        if messageType != .agentHandshake && messageType != .agentPing {
+            guard let payload = decodeMINATOPayload(packet.payload),
+                  let remoteCard = MINATOAgentStore.shared.remoteCard(for: senderID),
+                  let ed25519PubKeyHex = remoteCard.ed25519PubKey else {
+                SecureLogger.warning("MINATO \(messageType.description): no verified Ed25519 key for \(senderID.id.prefix(8)), dropping", category: .security)
+                return
+            }
+            guard MINATOSigning.verify(payload, senderEd25519Hex: ed25519PubKeyHex) else {
+                SecureLogger.warning("MINATO \(messageType.description): invalid envelope signature from \(senderID.id.prefix(8)), dropping", category: .security)
+                return
+            }
+        }
+
         SecureLogger.info("MINATO \(messageType.description) from \(senderID.id.prefix(8))", category: .session)
 
         switch messageType {
@@ -38,6 +53,12 @@ extension BLEService {
         guard let payload = decodeMINATOPayload(packet.payload),
               let card = payload.payload.agentCard else {
             SecureLogger.warning("AGENT_HANDSHAKE missing or invalid Agent Card", category: .session)
+            return
+        }
+
+        // Verify AgentCard self-signature before trusting the sender
+        guard MINATOSigning.verify(card) else {
+            SecureLogger.warning("AGENT_HANDSHAKE rejected: invalid AgentCard signature from \(senderID.id.prefix(8))", category: .security)
             return
         }
 
@@ -555,7 +576,7 @@ extension BLEService {
             return MINATOAgentStore.shared.remoteCard(for: pid)?.agentId ?? ""
         }()
 
-        let envelope = MINATOPayload(
+        let unsigned = MINATOPayload(
             type: type.description,
             version: "0.1",
             from: localCard.agentId,
@@ -565,6 +586,7 @@ extension BLEService {
             payload: payload,
             signature: nil
         )
+        let envelope = MINATOSigning.sign(unsigned, using: getNoiseService())
 
         guard let jsonData = try? JSONEncoder().encode(envelope) else {
             SecureLogger.warning("Failed to encode MINATO payload", category: .session)

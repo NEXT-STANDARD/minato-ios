@@ -69,7 +69,7 @@ extension ChatViewModel {
     /// Send any MINATO message type via Nostr (used as BLE fallback).
     func sendMINATOViaNostr(type: MINATOMessageType, payload: PayloadContent, to peerID: PeerID) {
         guard let nostrTransport = messageRouter.nostrTransport else { return }
-        let envelope = MINATOPayload(
+        let unsigned = MINATOPayload(
             type: type.description,
             version: "0.1",
             from: MINATOAgentStore.shared.localCard?.agentId ?? "",
@@ -79,6 +79,7 @@ extension ChatViewModel {
             payload: payload,
             signature: nil
         )
+        let envelope = MINATOSigning.sign(unsigned, using: meshService.getNoiseService())
         guard let jsonData = try? JSONEncoder().encode(envelope) else { return }
         nostrTransport.sendMINATOMessage(type: type, jsonPayload: jsonData, to: peerID)
     }
