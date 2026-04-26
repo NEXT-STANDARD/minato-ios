@@ -428,6 +428,13 @@ extension BLEService {
 
         SecureLogger.info("AGENT_REQUEST [\(action ?? "?")] req=\(requestId.prefix(8)) from \(senderID.id.prefix(8))", category: .session)
 
+        // Remote-control commands take a separate path: they don't create a
+        // schedule negotiation entry and don't notify the chat delegate.
+        if let remoteAction = RemoteControlAction.parse(action) {
+            handleRemoteControlRequest(remoteAction, requestId: requestId, payload: payload, from: senderID)
+            return
+        }
+
         // Track the negotiation
         let negotiation = ScheduleNegotiation(
             id: requestId,
@@ -467,6 +474,14 @@ extension BLEService {
         let status = payload.payload.status
 
         SecureLogger.info("AGENT_RESPONSE req=\(requestId.prefix(8)) from \(senderID.id.prefix(8))", category: .session)
+
+        // Remote-control responses are answers to commands we issued; they
+        // don't belong on the schedule-negotiation state machine. UI layers
+        // can subscribe via a future callback; for now we log and stop.
+        if let remoteAction = RemoteControlAction.parse(payload.payload.action) {
+            SecureLogger.info("MINATO remote-control RESPONSE [\(remoteAction.rawValue)/\(status ?? "?")] req=\(requestId.prefix(8))", category: .session)
+            return
+        }
 
         // Update negotiation state
         if let event = proposedEvent {
@@ -615,5 +630,200 @@ extension BLEService {
             SecureLogger.warning("Failed to decode MINATO payload: \(error.localizedDescription)", category: .session)
             return nil
         }
+    }
+
+    // MARK: - Remote Control
+
+    /// Dispatches an inbound `remote.*` command to the appropriate handler.
+    /// Centralises capability gating, audit logging, and response framing so
+    /// individual command handlers stay focused on producing the result.
+    private func handleRemoteControlRequest(
+        _ action: RemoteControlAction,
+        requestId: String,
+        payload: MINATOPayload,
+        from senderID: PeerID
+    ) {
+        let receivedAt = Date()
+        let remoteCard = MINATOAgentStore.shared.remoteCard(for: senderID)
+
+        // Capability gate: the local agent must have declared the capability
+        // that this command requires. This protects us from peers issuing
+        // commands we never advertised support for.
+        let localCapabilities = MINATOAgentStore.shared.localCard?.capabilities ?? []
+        let required = action.requiredCapability.rawValue
+        guard localCapabilities.contains(required) else {
+            SecureLogger.info("MINATO remote-control [\(action.rawValue)] denied: capability \(required) not declared", category: .security)
+            sendRemoteControlResponse(
+                to: senderID,
+                requestId: requestId,
+                action: action,
+                status: .denied,
+                resultContext: ["reason": .string("capability_not_declared")]
+            )
+            return
+        }
+
+        // Trust gate for state-changing commands: in plan/suggest modes the
+        // owner has not pre-authorised any autonomous mutations, so we deny
+        // remote-write commands automatically. Read commands are allowed in
+        // any mode once the capability is declared.
+        if action.mutatesState {
+            let trustMode = MINATOAgentStore.shared.trustSettings(for: remoteCard?.agentId ?? "")?.mode ?? .plan
+            if !trustMode.allowsAutoExecution {
+                SecureLogger.info("MINATO remote-control [\(action.rawValue)] denied: trust mode \(trustMode.rawValue) does not allow auto execution", category: .security)
+                sendRemoteControlResponse(
+                    to: senderID,
+                    requestId: requestId,
+                    action: action,
+                    status: .denied,
+                    resultContext: ["reason": .string("trust_mode_blocks_write")]
+                )
+                return
+            }
+        }
+
+        switch action {
+        case .status:
+            handleRemoteStatus(requestId: requestId, action: action, from: senderID)
+        case .ping:
+            handleRemotePing(requestId: requestId, action: action, payload: payload, receivedAt: receivedAt, from: senderID)
+        case .cancel, .mute, .unmute:
+            // Phase 4.2 commands — accepted at the protocol layer but not yet
+            // wired to backing state. Reply with an explicit `error` so callers
+            // can detect partial implementations rather than time out, and skip
+            // the activity log (we didn't actually serve the command).
+            SecureLogger.info("MINATO remote-control [\(action.rawValue)]: handler not yet implemented", category: .session)
+            sendRemoteControlResponse(
+                to: senderID,
+                requestId: requestId,
+                action: action,
+                status: .error,
+                resultContext: ["reason": .string("handler_not_implemented")]
+            )
+            return
+        }
+
+        // Audit trail: record successfully served read commands so the owner
+        // can see who's been polling them. Denials and unimplemented branches
+        // return early; only the success path falls through to here.
+        let peerName = remoteCard?.displayName ?? "Unknown"
+        let logEntry = AgentActivityLog(
+            id: UUID().uuidString,
+            peerID: senderID.id,
+            peerName: peerName,
+            action: .remoteControlServed,
+            content: action.rawValue,
+            intent: payload.payload.intent,
+            timestamp: receivedAt
+        )
+        MINATOAgentStore.shared.appendActivityLog(logEntry)
+    }
+
+    private func handleRemoteStatus(requestId: String, action: RemoteControlAction, from senderID: PeerID) {
+        let localCard = MINATOAgentStore.shared.localCard
+        let remoteCard = MINATOAgentStore.shared.remoteCard(for: senderID)
+        let trustMode = MINATOAgentStore.shared.trustSettings(for: remoteCard?.agentId ?? "")?.mode
+
+        var ctx: [String: AnyCodableValue] = [
+            "online": .bool(true),
+            "ai_engine": .string(localCard?.aiEngine ?? "none"),
+            "minato_version": .string(localCard?.minatoVersion ?? "0.1")
+        ]
+        if let trustMode = trustMode {
+            ctx["trust_mode"] = .string(trustMode.rawValue)
+        }
+
+        sendRemoteControlResponse(
+            to: senderID,
+            requestId: requestId,
+            action: action,
+            status: .ok,
+            resultContext: ctx
+        )
+    }
+
+    private func handleRemotePing(
+        requestId: String,
+        action: RemoteControlAction,
+        payload: MINATOPayload,
+        receivedAt: Date,
+        from senderID: PeerID
+    ) {
+        // Echo back the requester's send-side timestamp so they can compute
+        // round-trip time client-side; we also report our receive-side delay
+        // (envelope timestamp → handler dispatch) for debugging.
+        let envelopeTs = payload.timestamp
+        let receiveDelayMs = max(0, Int64((receivedAt.timeIntervalSince1970 * 1000)) - Int64(envelopeTs) * 1000)
+
+        let ctx: [String: AnyCodableValue] = [
+            "echo_ts": .int(Int(envelopeTs)),
+            "receive_delay_ms": .int(Int(receiveDelayMs))
+        ]
+        sendRemoteControlResponse(
+            to: senderID,
+            requestId: requestId,
+            action: action,
+            status: .ok,
+            resultContext: ctx
+        )
+    }
+
+    /// Sends an `AGENT_RESPONSE` reply to a remote-control request. The
+    /// response carries the original `request_id` and an `action` field
+    /// echoing the command, so the requester can correlate it without state.
+    private func sendRemoteControlResponse(
+        to peerID: PeerID,
+        requestId: String,
+        action: RemoteControlAction,
+        status: RemoteControlStatus,
+        resultContext: [String: AnyCodableValue]?
+    ) {
+        let payloadContent = PayloadContent(
+            intent: Intent.infoExchange.rawValue,
+            content: nil,
+            originalLanguage: MINATOAgentStore.shared.localCard?.ownerLocale,
+            translatedContent: nil,
+            status: status.rawValue,
+            requestId: requestId,
+            action: action.rawValue,
+            context: resultContext,
+            proposedEvent: nil,
+            agentCard: nil
+        )
+
+        guard let encoded = encodeMINATOPacket(type: .agentResponse, payload: payloadContent, to: peerID) else { return }
+        sendMINATOPacket(encoded, directedTo: peerID)
+        SecureLogger.info("Sent remote-control RESPONSE [\(action.rawValue)/\(status.rawValue)] req=\(requestId.prefix(8)) to \(peerID.id.prefix(8))", category: .session)
+    }
+
+    /// Issues a remote-control command to a peer. The reply arrives as an
+    /// `AGENT_RESPONSE` correlated by `requestId`; callers track it via the
+    /// existing response delegate path.
+    /// - Returns: The `request_id` used (caller may pass one in or accept a fresh UUID).
+    @discardableResult
+    func sendRemoteControlRequest(
+        to peerID: PeerID,
+        action: RemoteControlAction,
+        requestId: String? = nil,
+        context: [String: AnyCodableValue]? = nil
+    ) -> String {
+        let id = requestId ?? UUID().uuidString
+        let payloadContent = PayloadContent(
+            intent: Intent.infoExchange.rawValue,
+            content: nil,
+            originalLanguage: MINATOAgentStore.shared.localCard?.ownerLocale,
+            translatedContent: nil,
+            status: nil,
+            requestId: id,
+            action: action.rawValue,
+            context: context,
+            proposedEvent: nil,
+            agentCard: nil
+        )
+        if let encoded = encodeMINATOPacket(type: .agentRequest, payload: payloadContent, to: peerID) {
+            sendMINATOPacket(encoded, directedTo: peerID)
+        }
+        SecureLogger.info("Sent remote-control REQUEST [\(action.rawValue)] req=\(id.prefix(8)) to \(peerID.id.prefix(8))", category: .session)
+        return id
     }
 }

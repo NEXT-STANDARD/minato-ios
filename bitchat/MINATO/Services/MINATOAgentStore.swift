@@ -51,6 +51,7 @@ struct AgentActivityLog: Codable, Identifiable {
         case autoReply           // full_auto sent a reply
         case autoScheduleAck     // full_auto confirmed a schedule
         case autoScheduleReject  // full_auto rejected a schedule
+        case remoteControlServed // responded to an inbound remote-control command
     }
 }
 

@@ -21,6 +21,13 @@ enum Capability: String, Codable, CaseIterable {
     case locationArea      = "location.area"
     case locationPrecise   = "location.precise"
 
+    // Remote control (Phase 4) — read-only commands a peer can issue against us.
+    // `read` covers introspection (status, ping). `write` covers state-changing
+    // commands (cancel a pending negotiation, mute auto-replies). Neither
+    // capability is granted by default; users opt in per-peer.
+    case remoteControlRead  = "remote.control.read"
+    case remoteControlWrite = "remote.control.write"
+
     /// Default capabilities for a new agent.
     static let defaults: [Capability] = [
         .scheduleRead,
@@ -33,7 +40,8 @@ enum Capability: String, Codable, CaseIterable {
     static let highRisk: Set<Capability> = [
         .scheduleWrite,
         .scheduleDelete,
-        .locationPrecise
+        .locationPrecise,
+        .remoteControlWrite
     ]
 
     /// Returns true if the given capability string is considered high-risk.
