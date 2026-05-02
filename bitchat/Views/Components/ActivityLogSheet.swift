@@ -72,6 +72,7 @@ struct ActivityLogSheet: View {
         case .autoReply: return "bubble.left.and.bubble.right.fill"
         case .autoScheduleAck: return "checkmark.circle.fill"
         case .autoScheduleReject: return "xmark.circle.fill"
+        case .remoteControlServed: return "antenna.radiowaves.left.and.right"
         }
     }
 
@@ -80,6 +81,7 @@ struct ActivityLogSheet: View {
         case .autoReply: return "自動返信"
         case .autoScheduleAck: return "自動承認"
         case .autoScheduleReject: return "自動辞退"
+        case .remoteControlServed: return "リモート操作応答"
         }
     }
 
@@ -88,6 +90,7 @@ struct ActivityLogSheet: View {
         case .autoReply: return .cyan
         case .autoScheduleAck: return .green
         case .autoScheduleReject: return .red
+        case .remoteControlServed: return .orange
         }
     }
 }
