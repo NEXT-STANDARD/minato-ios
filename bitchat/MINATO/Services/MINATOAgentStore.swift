@@ -122,7 +122,6 @@ final class MINATOAgentStore {
     let trust: TrustStore
     let negotiation: NegotiationStore
     let log: ActivityLogStore
-    let mute: MuteStore
 
     // MARK: - Notifications (re-exported from AgentIdentityStore)
 
@@ -155,14 +154,12 @@ final class MINATOAgentStore {
         identity: AgentIdentityStore = .shared,
         trust: TrustStore = .shared,
         negotiation: NegotiationStore = .shared,
-        log: ActivityLogStore = .shared,
-        mute: MuteStore = .shared
+        log: ActivityLogStore = .shared
     ) {
         self.identity = identity
         self.trust = trust
         self.negotiation = negotiation
         self.log = log
-        self.mute = mute
 
         // Wire identity → trust so that whenever a new remote Agent Card
         // introduces an agentId we've never seen, TrustStore seeds default

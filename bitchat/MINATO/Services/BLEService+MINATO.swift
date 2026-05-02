@@ -142,15 +142,6 @@ extension BLEService {
             return
         }
 
-        // Honour `remote.mute`: the peer has asked us to stop auto-replying
-        // to them. Manual messages composed by the owner are not affected
-        // (they go through sendAgentMessage directly).
-        if let remoteNpub = MINATOAgentStore.shared.remoteCard(for: peerID)?.agentId,
-           MINATOAgentStore.shared.mute.isMuted(npub: remoteNpub) {
-            SecureLogger.info("MINATO: skipping auto-reply to \(remoteNpub.prefix(12)) (muted)", category: .session)
-            return
-        }
-
         // Lazy-initialize AI engine if not yet set but API key is available
         if MINATOAgentStore.shared.aiEngine == nil, let apiKey = GeminiAPIKey.default {
             MINATOAgentStore.shared.setAIEngine(GeminiEngine(apiKey: apiKey))
@@ -691,24 +682,26 @@ extension BLEService {
             }
         }
 
-        // Each handler returns false to signal "responded with non-ok / not
-        // actually served" so we can skip the audit log for those branches.
-        let served: Bool
         switch action {
         case .status:
             handleRemoteStatus(requestId: requestId, action: action, from: senderID)
-            served = true
         case .ping:
             handleRemotePing(requestId: requestId, action: action, payload: payload, receivedAt: receivedAt, from: senderID)
-            served = true
-        case .cancel:
-            served = handleRemoteCancel(requestId: requestId, payload: payload, from: senderID)
-        case .mute:
-            served = handleRemoteMute(requestId: requestId, action: action, from: senderID)
-        case .unmute:
-            served = handleRemoteUnmute(requestId: requestId, action: action, from: senderID)
+        case .cancel, .mute, .unmute:
+            // Phase 4.2 commands — accepted at the protocol layer but not yet
+            // wired to backing state. Reply with an explicit `error` so callers
+            // can detect partial implementations rather than time out, and skip
+            // the activity log (we didn't actually serve the command).
+            SecureLogger.info("MINATO remote-control [\(action.rawValue)]: handler not yet implemented", category: .session)
+            sendRemoteControlResponse(
+                to: senderID,
+                requestId: requestId,
+                action: action,
+                status: .error,
+                resultContext: ["reason": .string("handler_not_implemented")]
+            )
+            return
         }
-        guard served else { return }
 
         // Audit trail: record successfully served read commands so the owner
         // can see who's been polling them. Denials and unimplemented branches
@@ -773,145 +766,6 @@ extension BLEService {
             status: .ok,
             resultContext: ctx
         )
-    }
-
-    /// Cancels an in-flight 1:1 schedule negotiation by `target_request_id`.
-    /// The requester is only allowed to cancel a negotiation it is a party to
-    /// (i.e. the negotiation's other side). Group negotiations are not yet
-    /// supported and respond with `denied` / `reason: "group_not_supported"`.
-    /// - Returns: `true` if the cancel was served (success path; falls through
-    ///   to the audit log). `false` if we already replied with a non-`ok`
-    ///   status and the caller should skip the audit log.
-    private func handleRemoteCancel(
-        requestId: String,
-        payload: MINATOPayload,
-        from senderID: PeerID
-    ) -> Bool {
-        let targetIdValue = payload.payload.context?["target_request_id"]
-        let targetId: String? = {
-            if case .string(let v) = targetIdValue { return v }
-            return nil
-        }()
-        guard let targetId = targetId, !targetId.isEmpty else {
-            sendRemoteControlResponse(
-                to: senderID,
-                requestId: requestId,
-                action: .cancel,
-                status: .error,
-                resultContext: ["reason": .string("missing_target_request_id")]
-            )
-            return false
-        }
-
-        // Group cancellation needs participant-membership checks plus
-        // notification fan-out to the other peers; out of scope for v1.
-        if MINATOAgentStore.shared.groupNegotiation(for: targetId) != nil {
-            sendRemoteControlResponse(
-                to: senderID,
-                requestId: requestId,
-                action: .cancel,
-                status: .denied,
-                resultContext: ["reason": .string("group_not_supported")]
-            )
-            return false
-        }
-
-        guard let neg = MINATOAgentStore.shared.negotiation(for: targetId) else {
-            sendRemoteControlResponse(
-                to: senderID,
-                requestId: requestId,
-                action: .cancel,
-                status: .notFound,
-                resultContext: ["target_request_id": .string(targetId)]
-            )
-            return false
-        }
-
-        // The requester must be the other side of the negotiation. (For 1:1
-        // there are exactly two parties: us and `neg.peerID`.)
-        guard neg.peerID == senderID else {
-            sendRemoteControlResponse(
-                to: senderID,
-                requestId: requestId,
-                action: .cancel,
-                status: .denied,
-                resultContext: ["reason": .string("not_a_participant")]
-            )
-            return false
-        }
-
-        MINATOAgentStore.shared.updateNegotiation(requestId: targetId, state: .cancelled)
-        // Drop any owner-facing approval that was queued for this negotiation;
-        // the remote side has already moved on.
-        MINATOAgentStore.shared.removePendingScheduleApproval(for: targetId)
-
-        sendRemoteControlResponse(
-            to: senderID,
-            requestId: requestId,
-            action: .cancel,
-            status: .ok,
-            resultContext: ["target_request_id": .string(targetId)]
-        )
-        return true
-    }
-
-    /// Adds the requester's npub to the mute set so subsequent inbound
-    /// `AGENT_MESSAGE` traffic from them does not trigger an AI auto-reply.
-    /// No-op (still `ok`) if the requester is already muted.
-    /// - Returns: `true` when the mute was applied (audit-logged); `false`
-    ///   when the requester's npub could not be resolved (defensive — the
-    ///   envelope signature check upstream already requires a known card).
-    private func handleRemoteMute(requestId: String, action: RemoteControlAction, from senderID: PeerID) -> Bool {
-        let remoteCard = MINATOAgentStore.shared.remoteCard(for: senderID)
-        guard let npub = remoteCard?.agentId, !npub.isEmpty else {
-            sendRemoteControlResponse(
-                to: senderID,
-                requestId: requestId,
-                action: action,
-                status: .error,
-                resultContext: ["reason": .string("requester_npub_unknown")]
-            )
-            return false
-        }
-        MINATOAgentStore.shared.mute.mute(npub: npub)
-        SecureLogger.info("MINATO remote-control: muted auto-replies to \(npub.prefix(12))", category: .session)
-        sendRemoteControlResponse(
-            to: senderID,
-            requestId: requestId,
-            action: action,
-            status: .ok,
-            resultContext: nil
-        )
-        return true
-    }
-
-    /// Reverses a previous `remote.mute`. Returns `ok` whether or not the
-    /// requester was actually muted; the `was_muted` flag in the response
-    /// context lets callers tell the difference for diagnostics.
-    /// - Returns: `true` when served (audit-logged); `false` on the defensive
-    ///   "requester npub unknown" branch.
-    private func handleRemoteUnmute(requestId: String, action: RemoteControlAction, from senderID: PeerID) -> Bool {
-        let remoteCard = MINATOAgentStore.shared.remoteCard(for: senderID)
-        guard let npub = remoteCard?.agentId, !npub.isEmpty else {
-            sendRemoteControlResponse(
-                to: senderID,
-                requestId: requestId,
-                action: action,
-                status: .error,
-                resultContext: ["reason": .string("requester_npub_unknown")]
-            )
-            return false
-        }
-        let wasMuted = MINATOAgentStore.shared.mute.unmute(npub: npub)
-        SecureLogger.info("MINATO remote-control: unmuted \(npub.prefix(12)) (was_muted=\(wasMuted))", category: .session)
-        sendRemoteControlResponse(
-            to: senderID,
-            requestId: requestId,
-            action: action,
-            status: .ok,
-            resultContext: ["was_muted": .bool(wasMuted)]
-        )
-        return true
     }
 
     /// Sends an `AGENT_RESPONSE` reply to a remote-control request. The
