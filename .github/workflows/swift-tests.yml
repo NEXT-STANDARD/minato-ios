@@ -10,6 +10,7 @@ jobs:
   test:
     name: Run Swift Tests
     runs-on: macos-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -28,7 +29,9 @@ jobs:
             ${{ runner.os }}-build-
 
       - name: Build the package
+        timeout-minutes: 8
         run: swift build
 
       - name: Run Tests
+        timeout-minutes: 8
         run: swift test --parallel
