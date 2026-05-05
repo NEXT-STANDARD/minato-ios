@@ -10,7 +10,7 @@ jobs:
   test:
     name: Run Swift Tests
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout code
@@ -29,11 +29,11 @@ jobs:
             ${{ runner.os }}-build-
 
       - name: Build the package
-        timeout-minutes: 8
+        timeout-minutes: 10
         run: swift build
 
       - name: Run Tests
-        timeout-minutes: 8
+        timeout-minutes: 18
         # `--parallel` was hanging on the macOS-latest runner: tests started
         # but never completed, suggesting one slow/flaky test was blocking
         # report aggregation. Run sequentially until the offending test is
