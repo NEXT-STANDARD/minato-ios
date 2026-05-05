@@ -38,4 +38,12 @@ jobs:
         # but never completed, suggesting one slow/flaky test was blocking
         # report aggregation. Run sequentially until the offending test is
         # identified and quarantined (or the runner stabilises).
-        run: swift test
+        #
+        # NotificationServiceTests crashes the XCTest process under
+        # `swift test` (not Xcode) because UNUserNotificationCenter.current()
+        # requires a Mach-O app bundle that the SwiftPM CLI does not provide
+        # (`bundleProxyForCurrentProcess is nil` → uncaught NSException).
+        # The crash leaves the runner in a state where the subsequent Swift
+        # Testing pass hangs forever. Skip until that test is fixed or
+        # quarantined to an Xcode-only target.
+        run: swift test --skip NotificationServiceTests
