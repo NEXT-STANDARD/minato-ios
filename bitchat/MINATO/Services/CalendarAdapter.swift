@@ -53,7 +53,7 @@ final class CalendarAdapter: CalendarAdapterProtocol {
         if let granted = accessGranted { return granted }
 
         let granted: Bool
-        if #available(iOS 17.0, *) {
+        if #available(iOS 17.0, macOS 14.0, *) {
             granted = (try? await store.requestFullAccessToEvents()) ?? false
         } else {
             granted = await withCheckedContinuation { continuation in
