@@ -34,4 +34,8 @@ jobs:
 
       - name: Run Tests
         timeout-minutes: 8
-        run: swift test --parallel
+        # `--parallel` was hanging on the macOS-latest runner: tests started
+        # but never completed, suggesting one slow/flaky test was blocking
+        # report aggregation. Run sequentially until the offending test is
+        # identified and quarantined (or the runner stabilises).
+        run: swift test
