@@ -45,7 +45,7 @@ extension BLEService {
         case .agentRevoke:
             handleAgentRevoke(packet, from: senderID)
         case .agentLog:
-            SecureLogger.debug("MINATO \(messageType.description) received (handler pending)", category: .session)
+            handleAgentLog(packet, from: senderID)
         }
     }
 
@@ -248,7 +248,7 @@ extension BLEService {
                                 timestamp: Date()
                             )
                             MINATOAgentStore.shared.appendActivityLog(logEntry)
-                            // Also emit an AGENT_LOG packet to self for network-level audit (future feature)
+                            self.sendAgentLog(to: peerID, entry: logEntry, trustMode: trustMode)
                         }
                     }
                 } catch {
@@ -553,7 +553,67 @@ extension BLEService {
         }
     }
 
+    // MARK: - AGENT_LOG
+
+    private func handleAgentLog(_ packet: BitchatPacket, from senderID: PeerID) {
+        guard let payload = decodeMINATOPayload(packet.payload) else {
+            SecureLogger.warning("AGENT_LOG missing payload", category: .session)
+            return
+        }
+
+        let logPayload = payload.payload
+        guard let logId = logPayload.logId,
+              let actionRaw = logPayload.action,
+              let action = AgentActivityLog.ActionType.fromProtocolValue(actionRaw),
+              let content = logPayload.content,
+              let trustModeRaw = logPayload.trustMode,
+              let trustMode = TrustMode(rawValue: trustModeRaw),
+              trustMode == .auto || trustMode == .fullAuto else {
+            SecureLogger.warning("AGENT_LOG rejected: invalid payload from \(senderID.id.prefix(8))", category: .security)
+            return
+        }
+
+        let remoteCard = MINATOAgentStore.shared.remoteCard(for: senderID)
+        let peerName = remoteCard?.displayName ?? "Unknown"
+        let entry = AgentActivityLog(
+            id: logId,
+            peerID: senderID.id,
+            peerName: peerName,
+            action: action,
+            content: content,
+            intent: logPayload.intent,
+            timestamp: Date(timeIntervalSince1970: TimeInterval(payload.timestamp))
+        )
+        MINATOAgentStore.shared.appendActivityLog(entry)
+        SecureLogger.info("AGENT_LOG action=\(action.protocolValue) trust=\(trustMode.rawValue) from \(senderID.id.prefix(8))", category: .session)
+    }
+
     // MARK: - Send Schedule Messages
+
+    /// Sends an AGENT_LOG as a post-hoc notification for an autonomous action.
+    func sendAgentLog(to peerID: PeerID, entry: AgentActivityLog, trustMode: TrustMode) {
+        let payloadContent = PayloadContent(
+            intent: entry.intent,
+            content: entry.content,
+            originalLanguage: nil,
+            translatedContent: nil,
+            status: nil,
+            requestId: nil,
+            action: entry.action.protocolValue,
+            logId: entry.id,
+            trustMode: trustMode.rawValue,
+            context: [
+                "peer_id": .string(entry.peerID),
+                "peer_name": .string(entry.peerName)
+            ],
+            proposedEvent: nil,
+            agentCard: nil
+        )
+
+        guard let encoded = encodeMINATOPacket(type: .agentLog, payload: payloadContent, to: peerID) else { return }
+        sendMINATOPacket(encoded, directedTo: peerID)
+        SecureLogger.info("Sent AGENT_LOG id=\(entry.id.prefix(8)) action=\(entry.action.protocolValue) to \(peerID.id.prefix(8))", category: .session)
+    }
 
     /// Sends an AGENT_REVOKE and applies the same revoke scope locally after the packet is queued.
     func sendAgentRevoke(to peerID: PeerID, scope: RevokeScope = .all, reason: String? = nil) {

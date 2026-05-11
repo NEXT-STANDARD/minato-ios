@@ -94,6 +94,8 @@ struct PayloadContent: Codable {
     let action: String?           // For AGENT_REQUEST: capability being invoked
     let scope: String?            // For AGENT_REVOKE: trust / agent_card / all
     let reason: String?           // For AGENT_REVOKE: human-readable reason
+    let logId: String?            // For AGENT_LOG: idempotency key
+    let trustMode: String?        // For AGENT_LOG: auto / full_auto
     let context: [String: AnyCodableValue]?
     let proposedEvent: ProposedEvent?
     let agentCard: AgentCard?     // For AGENT_HANDSHAKE
@@ -103,6 +105,8 @@ struct PayloadContent: Codable {
         case originalLanguage = "original_language"
         case translatedContent = "translated_content"
         case requestId = "request_id"
+        case logId = "log_id"
+        case trustMode = "trust_mode"
         case proposedEvent = "proposed_event"
         case agentCard = "agent_card"
     }
@@ -117,6 +121,8 @@ struct PayloadContent: Codable {
         action: String?,
         scope: String? = nil,
         reason: String? = nil,
+        logId: String? = nil,
+        trustMode: String? = nil,
         context: [String: AnyCodableValue]?,
         proposedEvent: ProposedEvent?,
         agentCard: AgentCard?
@@ -130,6 +136,8 @@ struct PayloadContent: Codable {
         self.action = action
         self.scope = scope
         self.reason = reason
+        self.logId = logId
+        self.trustMode = trustMode
         self.context = context
         self.proposedEvent = proposedEvent
         self.agentCard = agentCard

@@ -37,6 +37,7 @@ final class ActivityLogStore {
     /// Append a new activity log entry. Persists to Keychain automatically.
     func appendActivityLog(_ entry: AgentActivityLog) {
         queue.async(flags: .barrier) {
+            guard !self._activityLog.contains(where: { $0.id == entry.id }) else { return }
             self._activityLog.insert(entry, at: 0)
             if self._activityLog.count > Self.maxEntries {
                 self._activityLog = Array(self._activityLog.prefix(Self.maxEntries))

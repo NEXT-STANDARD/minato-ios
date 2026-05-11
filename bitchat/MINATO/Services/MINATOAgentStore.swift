@@ -51,6 +51,23 @@ struct AgentActivityLog: Codable, Identifiable {
         case autoReply           // full_auto sent a reply
         case autoScheduleAck     // full_auto confirmed a schedule
         case autoScheduleReject  // full_auto rejected a schedule
+
+        var protocolValue: String {
+            switch self {
+            case .autoReply: return "auto_reply"
+            case .autoScheduleAck: return "auto_schedule_ack"
+            case .autoScheduleReject: return "auto_schedule_reject"
+            }
+        }
+
+        static func fromProtocolValue(_ value: String) -> ActionType? {
+            switch value {
+            case "auto_reply": return .autoReply
+            case "auto_schedule_ack": return .autoScheduleAck
+            case "auto_schedule_reject": return .autoScheduleReject
+            default: return nil
+            }
+        }
     }
 }
 
