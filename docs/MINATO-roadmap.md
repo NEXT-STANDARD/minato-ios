@@ -1,7 +1,9 @@
 # MINATO Agent Protocol — iOS 実装ロードマップ
 
 最終更新: 2026-05-11
-参照 spec: `NEXT-STANDARD/minato-spec` @ `5d9ff3d` (2026-05-11)
+参照 spec: `NEXT-STANDARD/minato-spec` @ `3dc97b6` (2026-05-11)
+
+注意: `minato-ios` は `minato-spec` の思想を踏襲した派生実装のひとつ。iOS 側の実装都合をそのまま spec に反映しない。protocol 全体へ広げたい変更は、まず iOS 側 docs で shape を明文化し、必要な場合だけ spec への提案候補として分離する。
 
 ---
 
@@ -44,16 +46,13 @@
 
 ### Track A-1: Ed25519 署名実装（仕様違反解消）
 **ステータス**: 完了（2026-04-15）
-**spec commit**: `789c7d2 feat(agent-card): add ed25519_pub_key for signature verification`
+**spec note**: `789c7d2` は `3dc97b6` で revert 済み。現状は iOS 派生実装側の shape。
 **iOS commit**: `9311b12 feat(minato): implement Ed25519 signature for Agent Cards and envelopes`
 
 背景: `signature` フィールドは常に `nil` 送出（仕様違反）。
 既存 `NoiseEncryptionService` の Ed25519 鍵インフラを流用する。
 
-- [x] **spec**: `MINATO_PROTOCOL.md` §4 に `ed25519_pub_key` 追加、署名正規形を規定
-- [x] **spec**: `schema/agent-card.json` に `ed25519_pub_key` (required) 追加
-- [x] **spec**: `schema/common.json` に `ed25519_pub_key` 共通定義追加
-- [x] **spec**: `examples/handshake/` の Agent Card サンプル更新
+- [x] **iOS proposal**: `ed25519_pub_key` と署名正規形を iOS 実装で試行
 - [x] **iOS**: `AgentCard.swift` に `ed25519PubKey: String` 追加 + `signaturePayloadData()`
 - [x] **iOS**: `MINATOMessageType.swift` に envelope の `signaturePayloadData()`
 - [x] **iOS**: `MINATOSigning.swift` 新設（sign/verify 共通ヘルパ）
@@ -66,12 +65,9 @@
 
 ### Track A-2: AGENT_REVOKE (0x35) 実装
 **ステータス**: 完了（2026-05-11）
-**spec commit**: `45d6b5b feat(schema): add AGENT_REVOKE payload`
+**spec note**: `45d6b5b` は `ca0daed` で revert 済み。現状は iOS 派生実装側の shape。
 
-- [x] **spec**: `schema/agent-revoke.json` 追加
-- [x] **spec**: `examples/revoke/01-revoke-all.json` + README 追加
-- [x] **spec**: `MINATO_PROTOCOL.md` §10 に `AGENT_REVOKE` payload 定義追加
-- [x] **spec**: `scope` を `trust` / `agent_card` / `all` として定義
+- [x] **iOS proposal**: `scope` を `trust` / `agent_card` / `all` として試行
 - [x] **iOS**: `PayloadContent` に `scope` / `reason` 追加
 - [x] **iOS**: `RevokeScope` enum 追加
 - [x] **iOS**: `handleAgentRevoke(_:)` 実装
@@ -81,12 +77,9 @@
 
 ### Track A-3: AGENT_LOG (0x37) ネットワーク送出
 **ステータス**: 完了（2026-05-11）
-**spec commit**: `5d9ff3d feat(schema): add AGENT_LOG payload`
+**spec note**: `5d9ff3d` は `00e19ce` で revert 済み。現状は iOS 派生実装側の shape。
 
-- [x] **spec**: `schema/agent-log.json` 追加
-- [x] **spec**: `examples/agent-log/01-auto-reply.json` + README 追加
-- [x] **spec**: `MINATO_PROTOCOL.md` §10 に `AGENT_LOG` payload 定義追加
-- [x] **spec**: `action` を `auto_reply` / `auto_schedule_ack` / `auto_schedule_reject` として定義
+- [x] **iOS proposal**: `action` を `auto_reply` / `auto_schedule_ack` / `auto_schedule_reject` として試行
 - [x] **iOS**: `PayloadContent` に `log_id` / `trust_mode` 追加
 - [x] **iOS**: `AgentActivityLog.ActionType` に protocol snake_case 変換を追加（永続化 rawValue は互換維持）
 - [x] **iOS**: full_auto/auto の自動返信後に 0x37 `AGENT_LOG` を送出
@@ -98,20 +91,21 @@
 
 ## 未着手
 
-### Track B: スキーマ網羅（0x30/0x36 残）
-spec 側で残り 2 スキーマを追加し、schema カバレッジを 0x30–0x37 完備に:
-- `schema/agent-handshake.json` (0x30)
-- `schema/agent-revoke.json` (0x35) — Track A-2 で完了
-- `schema/agent-ping.json` (0x36)
-- `schema/agent-log.json` (0x37) — Track A-3 で完了
+### Track B: iOS message shape 整理（0x30〜0x37）
+次は spec 変更ではなく、iOS 側で現在の message shape を明文化する:
+- `docs/MINATO-message-shapes.md` 新設
+- 0x30〜0x37 の iOS 実装上の payload shape を一覧化
+- `AGENT_HANDSHAKE` は実装済み shape と検証方式を明記
+- `AGENT_PING` は現状 no-op heartbeat と明記
+- spec 反映候補は「提案候補」として分離
 
 ### Track B-2: docs/ 充実
 - `docs/ja/MINATO_PROTOCOL.md` — 日本語版復元
 - `docs/en/` — 英語実装ガイド
 
-### Track C-2: Spec examples との golden test
-- spec examples JSON を iOS 側で decode → re-encode して差分ゼロを CI で確認
-- `ajv-cli` で examples が schema に適合することを CI で確認
+### Track C-2: iOS examples / golden test
+- iOS 側 docs/examples JSON を decode → re-encode して差分ゼロを確認
+- spec 連携は、提案候補が固まってから別トラックで扱う
 
 ### Track D: ドキュメント運用
 - `CLAUDE.md` に「MINATO 署名フロー」セクション追加
@@ -139,6 +133,6 @@ spec 側で残り 2 スキーマを追加し、schema カバレッジを 0x30–
 | `9186365` | schema 初版 (6 ファイル) | 準拠 |
 | `83f4e72` | transport fallback / schedule negotiation / AGENT_RESPONSE / persistence | Phase 3 で実装済み |
 | `4d2ad7e` | request_id を payload 内に移動 | 反映済み (`payload.request_id`) |
-| `789c7d2` | `ed25519_pub_key` 追加 | iOS `9311b12` で反映済み |
-| `45d6b5b` | `AGENT_REVOKE` payload/schema/example 追加 | Track A-2 で反映済み |
-| `5d9ff3d` | `AGENT_LOG` payload/schema/example 追加 | Track A-3 で反映済み |
+| `789c7d2` | `ed25519_pub_key` 追加 | `3dc97b6` で revert 済み。iOS shape として継続 |
+| `45d6b5b` | `AGENT_REVOKE` payload/schema/example 追加 | `ca0daed` で revert 済み。iOS shape として継続 |
+| `5d9ff3d` | `AGENT_LOG` payload/schema/example 追加 | `00e19ce` で revert 済み。iOS shape として継続 |
