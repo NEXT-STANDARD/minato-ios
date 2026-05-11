@@ -42,7 +42,9 @@ extension BLEService {
             handleAgentResponse(packet, from: senderID)
         case .agentAck:
             handleAgentAck(packet, from: senderID)
-        case .agentRevoke, .agentLog:
+        case .agentRevoke:
+            handleAgentRevoke(packet, from: senderID)
+        case .agentLog:
             SecureLogger.debug("MINATO \(messageType.description) received (handler pending)", category: .session)
         }
     }
@@ -515,7 +517,68 @@ extension BLEService {
         }
     }
 
+    // MARK: - AGENT_REVOKE
+
+    private func handleAgentRevoke(_ packet: BitchatPacket, from senderID: PeerID) {
+        guard let payload = decodeMINATOPayload(packet.payload) else {
+            SecureLogger.warning("AGENT_REVOKE missing payload", category: .session)
+            return
+        }
+
+        let revokePayload = payload.payload
+        guard revokePayload.intent == Intent.connectionTerminate.rawValue else {
+            SecureLogger.warning("AGENT_REVOKE rejected: invalid intent from \(senderID.id.prefix(8))", category: .security)
+            return
+        }
+
+        let scope = RevokeScope(rawValue: revokePayload.scope ?? RevokeScope.all.rawValue) ?? .all
+        applyAgentRevoke(peerID: senderID, agentId: payload.from, scope: scope)
+
+        let reason = revokePayload.reason ?? "no reason"
+        SecureLogger.info("AGENT_REVOKE scope=\(scope.rawValue) from \(senderID.id.prefix(8)): \(reason)", category: .session)
+    }
+
+    private func applyAgentRevoke(peerID: PeerID, agentId: String, scope: RevokeScope) {
+        switch scope {
+        case .trust:
+            MINATOAgentStore.shared.removeTrustSettings(for: agentId)
+            MINATOAgentStore.shared.removePendingReply(for: peerID)
+        case .agentCard:
+            MINATOAgentStore.shared.removeRemoteCard(for: peerID)
+            MINATOAgentStore.shared.removePendingReply(for: peerID)
+        case .all:
+            MINATOAgentStore.shared.removeTrustSettings(for: agentId)
+            MINATOAgentStore.shared.removeRemoteCard(for: peerID)
+            MINATOAgentStore.shared.removePendingReply(for: peerID)
+        }
+    }
+
     // MARK: - Send Schedule Messages
+
+    /// Sends an AGENT_REVOKE and applies the same revoke scope locally after the packet is queued.
+    func sendAgentRevoke(to peerID: PeerID, scope: RevokeScope = .all, reason: String? = nil) {
+        let remoteAgentId = MINATOAgentStore.shared.remoteCard(for: peerID)?.agentId
+        let payloadContent = PayloadContent(
+            intent: Intent.connectionTerminate.rawValue,
+            content: nil,
+            originalLanguage: MINATOAgentStore.shared.localCard?.ownerLocale,
+            translatedContent: nil,
+            status: nil, requestId: nil, action: nil,
+            scope: scope.rawValue,
+            reason: reason,
+            context: nil,
+            proposedEvent: nil,
+            agentCard: nil
+        )
+
+        guard let encoded = encodeMINATOPacket(type: .agentRevoke, payload: payloadContent, to: peerID) else { return }
+        sendMINATOPacket(encoded, directedTo: peerID)
+
+        if let remoteAgentId {
+            applyAgentRevoke(peerID: peerID, agentId: remoteAgentId, scope: scope)
+        }
+        SecureLogger.info("Sent AGENT_REVOKE scope=\(scope.rawValue) to \(peerID.id.prefix(8))", category: .session)
+    }
 
     /// Sends an AGENT_REQUEST (e.g., schedule proposal).
     func sendAgentRequest(to peerID: PeerID, requestId: String, intent: String, action: String, proposedEvent: ProposedEvent?, content: String?, translatedContent: String?) {

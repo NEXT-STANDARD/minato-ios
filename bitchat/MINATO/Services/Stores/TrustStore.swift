@@ -47,6 +47,13 @@ final class TrustStore {
         }
     }
 
+    func removeTrustSettings(for npub: String) {
+        queue.async(flags: .barrier) {
+            self._trustSettings.removeValue(forKey: npub)
+            self.persistTrustSettings(self._trustSettings)
+        }
+    }
+
     /// Ensures a default TrustSettings entry exists for the given npub. No-op if already present.
     /// Called by the facade after a new remote Agent Card is saved.
     func ensureDefaultSettings(for npub: String) {

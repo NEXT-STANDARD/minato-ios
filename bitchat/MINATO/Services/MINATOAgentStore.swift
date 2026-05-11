@@ -201,6 +201,10 @@ final class MINATOAgentStore {
         trust.updateTrustSettings(settings, for: npub)
     }
 
+    func removeTrustSettings(for npub: String) {
+        trust.removeTrustSettings(for: npub)
+    }
+
     func checkAndMarkInterimAck(to peerID: PeerID) -> Bool {
         trust.checkAndMarkInterimAck(to: peerID)
     }

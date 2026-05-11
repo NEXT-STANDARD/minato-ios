@@ -92,18 +92,56 @@ struct PayloadContent: Codable {
     let status: String?           // For AGENT_ACK: "confirmed" / "rejected"
     let requestId: String?        // For AGENT_REQUEST / AGENT_ACK
     let action: String?           // For AGENT_REQUEST: capability being invoked
+    let scope: String?            // For AGENT_REVOKE: trust / agent_card / all
+    let reason: String?           // For AGENT_REVOKE: human-readable reason
     let context: [String: AnyCodableValue]?
     let proposedEvent: ProposedEvent?
     let agentCard: AgentCard?     // For AGENT_HANDSHAKE
 
     enum CodingKeys: String, CodingKey {
-        case intent, content, status, action, context
+        case intent, content, status, action, scope, reason, context
         case originalLanguage = "original_language"
         case translatedContent = "translated_content"
         case requestId = "request_id"
         case proposedEvent = "proposed_event"
         case agentCard = "agent_card"
     }
+
+    init(
+        intent: String?,
+        content: String?,
+        originalLanguage: String?,
+        translatedContent: String?,
+        status: String?,
+        requestId: String?,
+        action: String?,
+        scope: String? = nil,
+        reason: String? = nil,
+        context: [String: AnyCodableValue]?,
+        proposedEvent: ProposedEvent?,
+        agentCard: AgentCard?
+    ) {
+        self.intent = intent
+        self.content = content
+        self.originalLanguage = originalLanguage
+        self.translatedContent = translatedContent
+        self.status = status
+        self.requestId = requestId
+        self.action = action
+        self.scope = scope
+        self.reason = reason
+        self.context = context
+        self.proposedEvent = proposedEvent
+        self.agentCard = agentCard
+    }
+}
+
+/// Scope affected by AGENT_REVOKE.
+/// See MINATO_PROTOCOL.md §10 — AGENT_REVOKE.
+enum RevokeScope: String, Codable, CaseIterable {
+    case trust
+    case agentCard = "agent_card"
+    case all
 }
 
 /// Event proposal for schedule negotiation.
