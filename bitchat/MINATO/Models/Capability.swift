@@ -21,6 +21,12 @@ enum Capability: String, Codable, CaseIterable {
     case locationArea      = "location.area"
     case locationPrecise   = "location.precise"
 
+    // Disaster (iOS-only extension, not in minato-spec).
+    // `share_safety` lets the agent broadcast its owner's safety status,
+    // approximate battery / position to peers as part of disaster mode.
+    // Off by default — owners opt in per emergency contact.
+    case disasterShareSafety = "disaster.share_safety"
+
     /// Default capabilities for a new agent.
     static let defaults: [Capability] = [
         .scheduleRead,
@@ -33,7 +39,8 @@ enum Capability: String, Codable, CaseIterable {
     static let highRisk: Set<Capability> = [
         .scheduleWrite,
         .scheduleDelete,
-        .locationPrecise
+        .locationPrecise,
+        .disasterShareSafety
     ]
 
     /// Returns true if the given capability string is considered high-risk.
@@ -57,6 +64,10 @@ enum Intent: String, Codable, CaseIterable {
     case trustDowngrade      = "trust.downgrade"
     case connectionEstablish = "connection.establish"
     case connectionTerminate = "connection.terminate"
+
+    // Disaster (iOS-only extension, not in minato-spec).
+    case disasterSafety      = "disaster.safety"        // unsolicited safety broadcast
+    case disasterSafetyQuery = "disaster.safety_query"  // ask a specific peer for their latest safety state
 
     /// Default intents supported by a new agent.
     static let defaults: [Intent] = [
