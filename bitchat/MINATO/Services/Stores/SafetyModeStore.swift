@@ -20,7 +20,10 @@ import Combine
 final class SafetyModeStore: ObservableObject {
     /// Production singleton. Tests construct their own instance with a mock
     /// provider and an injected clock instead of touching this.
-    static let shared = SafetyModeStore(batteryProvider: BatterySnapshotProvider())
+    static let shared = SafetyModeStore(
+        batteryProvider: BatterySnapshotProvider(),
+        locationProvider: SafetyLocationProvider()
+    )
 
     // MARK: - Published State
 
@@ -39,19 +42,28 @@ final class SafetyModeStore: ObservableObject {
     // MARK: - Dependencies
 
     private let batteryProvider: BatterySnapshotProviding
+    private let locationProvider: SafetyLocationProviding?
     private let clock: () -> Date
 
     // MARK: - Init
 
     /// - Parameters:
     ///   - batteryProvider: source of battery readings (mock in tests).
+    ///   - locationProvider: source of coarse location (nil = no location;
+    ///     tests omit it, production injects `SafetyLocationProvider`).
     ///   - clock: time source (injectable for deterministic tests).
-    init(batteryProvider: BatterySnapshotProviding, clock: @escaping () -> Date = { Date() }) {
+    init(
+        batteryProvider: BatterySnapshotProviding,
+        locationProvider: SafetyLocationProviding? = nil,
+        clock: @escaping () -> Date = { Date() }
+    ) {
         self.batteryProvider = batteryProvider
+        self.locationProvider = locationProvider
         self.clock = clock
         let now = clock()
         let snapshot = batteryProvider.currentSnapshot(now: now)
-        self.checkin = SafetyCheckin.makeLocalPreview(status: .unknown, battery: snapshot, now: now)
+        let location = locationProvider?.coarseLocation(now: now) ?? .undisclosed
+        self.checkin = SafetyCheckin.makeLocalPreview(status: .unknown, battery: snapshot, location: location, now: now)
     }
 
     // MARK: - Derived
@@ -102,6 +114,9 @@ final class SafetyModeStore: ObservableObject {
     private func rebuild(status: SafetyStatus) {
         let now = clock()
         let snapshot = batteryProvider.currentSnapshot(now: now)
-        checkin = SafetyCheckin.makeLocalPreview(status: status, battery: snapshot, now: now)
+        // Coarse (city-level) location only — precise location is attached per
+        // recipient at send time, never on the broadcast check-in (E-4b).
+        let location = locationProvider?.coarseLocation(now: now) ?? .undisclosed
+        checkin = SafetyCheckin.makeLocalPreview(status: status, battery: snapshot, location: location, now: now)
     }
 }

@@ -199,10 +199,20 @@
 - [x] `EmergencyContactsSheet`（連絡先一覧 + 期間ピッカー付与 + ワンタップ revoke + 状態表示）、DisasterModeView から起動
 - [x] テスト: override 失効、duration、TrustSettings ゲーティング、後方互換 decode、SafetyLocationPolicy
 
-### Track E-4b: CoreLocation 精密位置（保留）
-- CoreLocation で coarse/precise 位置を生成（位置情報パーミッション）
-- emergency override 相手へ directed（Noise 暗号化）送信で精密位置を限定共有
-- relay node の精密位置 redaction ポリシー（設計 doc open question）
+### Track E-4b: CoreLocation 位置生成（coarse 全体 / precise は暗号 directed）
+**ステータス**: 実装完了（2026-06-08、実機 E2E は別途）
+
+> 設計判断: **精密位置(lat/long)は暗号化 Nostr gift-wrap でのみ**（override 連絡先・E-5 経路）。BLE MINATO は平文 flood のため精密は載せず、**BLE broadcast は市レベル geohash(5文字)のみ**（既存 geohash presence と同水準）。precise は `SafetyLocationPolicy` が明示 override を許可した相手だけ。位置許可は When-In-Use。
+
+- [x] `LocationStateManager.currentCoordinate` 公開アクセサ
+- [x] `SafetyLocationProvider`（protocol + 実装、注入可能）: coarse=geohash5 / precise=geohash8+lat/long、未許可は nil
+- [x] `SafetyCheckin.makeLocalPreview(location:)` + `withLocation(_:)`、`SafetyModeStore` に locationProvider 注入（broadcast に coarse 注入）
+- [x] `broadcastSafetyCheckinViaNostr` を per-recipient 精密化（override 許可かつ位置取得時のみ precise を暗号 Nostr 送信）
+- [x] 起動時 `prepareSafetyLocation()`（enableLocationChannels で許可要求 + fix）
+- [x] テスト: makeLocalPreview(location:) / withLocation / store coarse 注入 / 未取得時 undisclosed
+- [ ] **実機 E2E（iPhone14 + iPad Air）**: 位置許可 / broadcast coarse geohash / override 相手 precise / mesh+Nostr 疎通
+
+> 保留: relay の精密位置 redaction（精密は暗号 directed のみ＝relay は中身を見られないので現設計で概ね不要）、公開 geohash Nostr（kind 20001）。
 
 ### Track E-5: Nostr/Internet store-and-forward
 **ステータス**: 完了（2026-06-08）

@@ -78,22 +78,44 @@ extension ChatViewModel {
     /// verify it via TOFU even without a prior handshake.
     func broadcastSafetyCheckinViaNostr(_ checkin: SafetyCheckin) {
         let recipients = emergencyOverridePeerIDs()
-        guard !recipients.isEmpty,
-              let localCard = MINATOAgentStore.shared.localCard,
-              let contextValue = try? checkin.asContextValue() else { return }
-        let payloadContent = PayloadContent(
-            intent: Intent.safetyCheckin.rawValue,
-            content: checkin.content,
-            originalLanguage: localCard.ownerLocale,
-            translatedContent: nil,
-            status: nil, requestId: nil, action: nil,
-            context: [MINATOPayload.safetyCheckinContextKey: contextValue],
-            proposedEvent: nil,
-            agentCard: localCard
-        )
+        guard !recipients.isEmpty, let localCard = MINATOAgentStore.shared.localCard else { return }
+        let now = UInt64(Date().timeIntervalSince1970)
+        // Precise location (E-4b) is only ever attached here — over the encrypted
+        // Nostr gift-wrap, never the cleartext BLE broadcast — and only for a
+        // recipient whose active emergency override grants it.
+        let preciseLocation = SafetyLocationProvider().preciseLocation(now: Date())
+
         for peerID in recipients {
+            let npub = MINATOAgentStore.shared.remoteCard(for: peerID)?.agentId
+            let settings = npub.flatMap { MINATOAgentStore.shared.trustSettings(for: $0) }
+            let precision = SafetyLocationPolicy.allowedPrecision(for: settings, now: now)
+
+            let recipientCheckin: SafetyCheckin
+            if precision == .precise, let preciseLocation {
+                recipientCheckin = checkin.withLocation(preciseLocation)
+            } else {
+                recipientCheckin = checkin   // coarse (from the store) or undisclosed
+            }
+
+            guard let contextValue = try? recipientCheckin.asContextValue() else { continue }
+            let payloadContent = PayloadContent(
+                intent: Intent.safetyCheckin.rawValue,
+                content: recipientCheckin.content,
+                originalLanguage: localCard.ownerLocale,
+                translatedContent: nil,
+                status: nil, requestId: nil, action: nil,
+                context: [MINATOPayload.safetyCheckinContextKey: contextValue],
+                proposedEvent: nil,
+                agentCard: localCard
+            )
             sendMINATOViaNostr(type: .agentMessage, payload: payloadContent, to: peerID)
         }
+    }
+
+    /// Request location permission + a fresh fix so disaster-mode check-ins can
+    /// carry a coarse geohash. Called on activation.
+    func prepareSafetyLocation() {
+        LocationStateManager.shared.enableLocationChannels()
     }
 
     /// PeerIDs of known contacts that currently have an active emergency override.
