@@ -149,10 +149,16 @@
 - [x] `SafetyPayloadTests` / `SafetyModeStoreTests` 追加
 
 ### Track E-2: Safety payload integration
-- `safety.checkin` を `MINATOPayload` で encode/decode
-- safety-specific fields は初回 `payload.context` に格納
-- `docs/examples/minato-ios/safety_checkin.json` 追加
-- `docs/MINATO-message-shapes.md` に safety payload section を追記
+**ステータス**: 完了（2026-06-08）
+
+> 設計判断: `safety.checkin` は新 wire 型を作らず **`AGENT_MESSAGE`(0x31) + `intent=safety.checkin`** に乗せ、安否データは **`payload.context["safety_checkin"]`** に格納する iOS-derived shape。docs では iOS proposal candidate として明示。
+
+- [x] `SafetyCheckin` ⇄ `AnyCodableValue` ブリッジ（`SafetyPayload+MINATO.swift`）
+- [x] `MINATOPayload.safetyCheckin(...)` builder + `decodedSafetyCheckin()` extractor + `isSafetyCheckin`
+- [x] safety intents/capabilities を中央 `Intent`/`Capability` に統合（`safety.location.precise` を highRisk）。`SafetyModels` の standalone enum は集約・削除
+- [x] `docs/examples/minato-ios/safety_checkin.json`（canonical）追加 + golden test に登録
+- [x] `docs/MINATO-message-shapes.md` に safety section（intent/capability/shape）追記
+- [x] `SafetyCheckinEnvelopeTests` 追加（round-trip / intent / 署名正規形 / highRisk）
 
 ### Track E-3: BLE mesh relay
 - Disaster Mode safety check-ins を BLE mesh 送信

@@ -2,24 +2,9 @@ import Foundation
 
 // MARK: - Disaster Mode Safety Models
 
-enum SafetyIntent {
-    static let checkin = "safety.checkin"
-    static let requestHelp = "safety.request_help"
-    static let resourceOffer = "safety.resource_offer"
-    static let resourceRequest = "safety.resource_request"
-    static let locationShare = "safety.location_share"
-    static let evacuationNotice = "safety.evacuation_notice"
-    static let personSearch = "safety.person_search"
-}
-
-enum SafetyCapability {
-    static let statusWrite = "safety.status.write"
-    static let locationCoarse = "safety.location.coarse"
-    static let locationPrecise = "safety.location.precise"
-    static let relay = "safety.relay"
-    static let broadcast = "safety.broadcast"
-    static let personSearch = "safety.person_search"
-}
+// Safety intents and capabilities live in the central `Intent` / `Capability`
+// enums (see Capability.swift) so they participate in Agent Card advertisement
+// and high-risk gating. e.g. `Intent.safetyCheckin`, `Capability.safetyLocationPrecise`.
 
 enum SafetyStatus: String, Codable, CaseIterable, Equatable, Identifiable {
     case safe

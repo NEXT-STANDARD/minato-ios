@@ -21,6 +21,16 @@ enum Capability: String, Codable, CaseIterable {
     case locationArea      = "location.area"
     case locationPrecise   = "location.precise"
 
+    // Safety / Disaster mode (iOS-derived extension, not in minato-spec).
+    // Off by default — owners opt in, typically per emergency contact.
+    // See: docs/MINATO-disaster-mode.md, docs/MINATO-message-shapes.md
+    case safetyStatusWrite     = "safety.status.write"
+    case safetyLocationCoarse  = "safety.location.coarse"
+    case safetyLocationPrecise = "safety.location.precise"
+    case safetyRelay           = "safety.relay"
+    case safetyBroadcast       = "safety.broadcast"
+    case safetyPersonSearch    = "safety.person_search"
+
     /// Default capabilities for a new agent.
     static let defaults: [Capability] = [
         .scheduleRead,
@@ -33,7 +43,8 @@ enum Capability: String, Codable, CaseIterable {
     static let highRisk: Set<Capability> = [
         .scheduleWrite,
         .scheduleDelete,
-        .locationPrecise
+        .locationPrecise,
+        .safetyLocationPrecise
     ]
 
     /// Returns true if the given capability string is considered high-risk.
@@ -57,6 +68,16 @@ enum Intent: String, Codable, CaseIterable {
     case trustDowngrade      = "trust.downgrade"
     case connectionEstablish = "connection.establish"
     case connectionTerminate = "connection.terminate"
+
+    // Safety / Disaster mode (iOS-derived extension, not in minato-spec).
+    // See: docs/MINATO-disaster-mode.md, docs/MINATO-message-shapes.md
+    case safetyCheckin          = "safety.checkin"
+    case safetyRequestHelp      = "safety.request_help"
+    case safetyResourceOffer    = "safety.resource_offer"
+    case safetyResourceRequest  = "safety.resource_request"
+    case safetyLocationShare    = "safety.location_share"
+    case safetyEvacuationNotice = "safety.evacuation_notice"
+    case safetyPersonSearch     = "safety.person_search"
 
     /// Default intents supported by a new agent.
     static let defaults: [Intent] = [
