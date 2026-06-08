@@ -3,17 +3,18 @@ import SwiftUI
 struct AppInfoView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.minatoAlert) var isHighAlert
+
     private var backgroundColor: Color {
-        MinatoTheme.background(colorScheme)
+        MinatoTheme.background(colorScheme, alert: isHighAlert)
     }
 
     private var textColor: Color {
-        MinatoTheme.ink(colorScheme)
+        MinatoTheme.ink(colorScheme, alert: isHighAlert)
     }
 
     private var secondaryTextColor: Color {
-        MinatoTheme.inkSecondary(colorScheme)
+        MinatoTheme.inkSecondary(colorScheme, alert: isHighAlert)
     }
     
     // MARK: - Constants
@@ -202,9 +203,10 @@ struct AppInfoFeatureInfo {
 struct SectionHeader: View {
     let title: LocalizedStringKey
     @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.minatoAlert) var isHighAlert
+
     private var textColor: Color {
-        MinatoTheme.ink(colorScheme)
+        MinatoTheme.ink(colorScheme, alert: isHighAlert)
     }
 
     init(_ title: LocalizedStringKey) {
@@ -222,13 +224,14 @@ struct SectionHeader: View {
 struct FeatureRow: View {
     let info: AppInfoFeatureInfo
     @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.minatoAlert) var isHighAlert
+
     private var textColor: Color {
-        MinatoTheme.ink(colorScheme)
+        MinatoTheme.ink(colorScheme, alert: isHighAlert)
     }
 
     private var secondaryTextColor: Color {
-        MinatoTheme.inkSecondary(colorScheme)
+        MinatoTheme.inkSecondary(colorScheme, alert: isHighAlert)
     }
 
     var body: some View {

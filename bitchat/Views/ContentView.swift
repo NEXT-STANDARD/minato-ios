@@ -86,16 +86,20 @@ struct ContentView: View {
     
     // MARK: - Computed Properties
     
+    /// True while disaster mode is active — flips the whole screen to the
+    /// MinatoTheme high-alert palette.
+    private var isHighAlert: Bool { safetyStore.isActive }
+
     private var backgroundColor: Color {
-        MinatoTheme.background(colorScheme)
+        MinatoTheme.background(colorScheme, alert: isHighAlert)
     }
 
     private var textColor: Color {
-        MinatoTheme.ink(colorScheme)
+        MinatoTheme.ink(colorScheme, alert: isHighAlert)
     }
 
     private var secondaryTextColor: Color {
-        MinatoTheme.inkSecondary(colorScheme)
+        MinatoTheme.inkSecondary(colorScheme, alert: isHighAlert)
     }
 
     private var headerLineLimit: Int? {
@@ -315,7 +319,7 @@ struct ContentView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .buttonStyle(.plain)
-                        .background(MinatoTheme.surface(colorScheme))
+                        .background(MinatoTheme.surface(colorScheme, alert: isHighAlert))
                     }
                 }
                 .background(backgroundColor)
@@ -352,7 +356,7 @@ struct ContentView: View {
                 .padding(.horizontal, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(MinatoTheme.surface(colorScheme))
+                        .fill(MinatoTheme.surface(colorScheme, alert: isHighAlert))
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .onChange(of: messageText) { newValue in
@@ -385,7 +389,7 @@ struct ContentView: View {
                 .padding(.horizontal, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(MinatoTheme.surface(colorScheme))
+                        .fill(MinatoTheme.surface(colorScheme, alert: isHighAlert))
                 )
                 .modifier(FocusEffectDisabledModifier())
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1235,6 +1239,19 @@ struct ContentView: View {
             Text("content.alert.screenshot.message")
         }
         .background(backgroundColor.opacity(0.95))
+        // Outermost so the high-alert frame draws over the whole window AND
+        // \.minatoAlert propagates into every presented sheet/cover below.
+        .minatoHighAlert(isHighAlert)
+        #if os(iOS)
+        .onChange(of: safetyStore.isActive) { active in
+            guard active else { return }
+            UIAccessibility.post(
+                notification: .announcement,
+                argument: String(localized: "content.accessibility.disaster_mode_activated",
+                                 defaultValue: "災害モードを起動しました。画面が高警戒表示に切り替わりました。")
+            )
+        }
+        #endif
     }
 
 }

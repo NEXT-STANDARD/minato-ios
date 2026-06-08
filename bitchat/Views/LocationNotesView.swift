@@ -7,6 +7,7 @@ struct LocationNotesView: View {
     let onNotesCountChanged: ((Int) -> Void)?
 
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.minatoAlert) var isHighAlert
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject private var locationManager = LocationChannelManager.shared
     @Environment(\.dismiss) private var dismiss
@@ -23,7 +24,7 @@ struct LocationNotesView: View {
         _manager = StateObject(wrappedValue: manager ?? LocationNotesManager(geohash: gh))
     }
 
-    private var backgroundColor: Color { MinatoTheme.background(colorScheme) }
+    private var backgroundColor: Color { MinatoTheme.background(colorScheme, alert: isHighAlert) }
     private var accentGreen: Color { MinatoTheme.accent }
     private var maxDraftLines: Int { dynamicTypeSize.isAccessibilitySize ? 5 : 3 }
 

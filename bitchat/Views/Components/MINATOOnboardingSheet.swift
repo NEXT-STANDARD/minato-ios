@@ -7,6 +7,7 @@ struct MINATOOnboardingSheet: View {
     let onDismiss: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.minatoAlert) private var isHighAlert
 
     var body: some View {
         NavigationView {
@@ -48,7 +49,7 @@ struct MINATOOnboardingSheet: View {
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(MinatoTheme.surface(colorScheme))
+                            .fill(MinatoTheme.surface(colorScheme, alert: isHighAlert))
                     )
 
                     // Current setting

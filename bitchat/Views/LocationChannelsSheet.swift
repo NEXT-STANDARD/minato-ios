@@ -12,10 +12,11 @@ struct LocationChannelsSheet: View {
     @ObservedObject private var network = NetworkActivationService.shared
     @EnvironmentObject var viewModel: ChatViewModel
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.minatoAlert) var isHighAlert
     @State private var customGeohash: String = ""
     @State private var customError: String? = nil
 
-    private var backgroundColor: Color { MinatoTheme.background(colorScheme) }
+    private var backgroundColor: Color { MinatoTheme.background(colorScheme, alert: isHighAlert) }
 
     private enum Strings {
         static let title: LocalizedStringKey = "location_channels.title"

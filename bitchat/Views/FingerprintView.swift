@@ -13,13 +13,14 @@ struct FingerprintView: View {
     let peerID: PeerID
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.minatoAlert) var isHighAlert
+
     private var textColor: Color {
-        MinatoTheme.ink(colorScheme)
+        MinatoTheme.ink(colorScheme, alert: isHighAlert)
     }
 
     private var backgroundColor: Color {
-        MinatoTheme.background(colorScheme)
+        MinatoTheme.background(colorScheme, alert: isHighAlert)
     }
 
     private enum Strings {
@@ -97,20 +98,20 @@ struct FingerprintView: View {
                         
                         Text(encryptionStatus.description)
                             .font(.bitchatSystem(size: 12, design: .monospaced))
-                            .foregroundColor(MinatoTheme.inkSecondary(colorScheme))
+                            .foregroundColor(MinatoTheme.inkSecondary(colorScheme, alert: isHighAlert))
                     }
                     
                     Spacer()
                 }
                 .padding()
-                .background(MinatoTheme.surface(colorScheme))
+                .background(MinatoTheme.surface(colorScheme, alert: isHighAlert))
                 .cornerRadius(8)
                 
                 // Their fingerprint
                 VStack(alignment: .leading, spacing: 8) {
                     Text(Strings.theirFingerprint)
                         .font(.bitchatSystem(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(MinatoTheme.inkSecondary(colorScheme))
+                        .foregroundColor(MinatoTheme.inkSecondary(colorScheme, alert: isHighAlert))
                     
                     if let fingerprint = viewModel.getFingerprint(for: statusPeerID) {
                         Text(formatFingerprint(fingerprint))
@@ -121,7 +122,7 @@ struct FingerprintView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(MinatoTheme.surface(colorScheme))
+                            .background(MinatoTheme.surface(colorScheme, alert: isHighAlert))
                             .cornerRadius(8)
                             .contextMenu {
                                 Button(Strings.copy) {
@@ -145,7 +146,7 @@ struct FingerprintView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(Strings.yourFingerprint)
                         .font(.bitchatSystem(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(MinatoTheme.inkSecondary(colorScheme))
+                        .foregroundColor(MinatoTheme.inkSecondary(colorScheme, alert: isHighAlert))
                     
                     let myFingerprint = viewModel.getMyFingerprint()
                     Text(formatFingerprint(myFingerprint))
@@ -156,7 +157,7 @@ struct FingerprintView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(MinatoTheme.surface(colorScheme))
+                        .background(MinatoTheme.surface(colorScheme, alert: isHighAlert))
                         .cornerRadius(8)
                         .contextMenu {
                             Button(Strings.copy) {
@@ -188,7 +189,7 @@ struct FingerprintView: View {
                             }
                         }
                             .font(.bitchatSystem(size: 12, design: .monospaced))
-                            .foregroundColor(MinatoTheme.inkSecondary(colorScheme))
+                            .foregroundColor(MinatoTheme.inkSecondary(colorScheme, alert: isHighAlert))
                             .multilineTextAlignment(.center)
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
