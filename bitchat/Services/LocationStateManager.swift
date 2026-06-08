@@ -105,6 +105,10 @@ final class LocationStateManager: NSObject, CLLocationManagerDelegate, Observabl
     private var refreshTimer: Timer?
     private var isGeocoding: Bool = false
 
+    /// Most recent device coordinate, if a fix is available. Read-only accessor
+    /// for disaster mode (E-4b) to derive a coarse geohash / precise lat-long.
+    var currentCoordinate: CLLocationCoordinate2D? { lastLocation?.coordinate }
+
     // MARK: - Persistence Keys
 
     private let selectedChannelKey = "locationChannel.selected"

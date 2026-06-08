@@ -198,6 +198,7 @@ struct SafetyCheckin: Codable, Equatable, Identifiable {
     static func makeLocalPreview(
         status: SafetyStatus,
         battery: SafetyBatterySnapshot,
+        location: SafetyLocation = .undisclosed,
         now: Date = Date()
     ) -> SafetyCheckin {
         let timestamp = UInt64(now.timeIntervalSince1970)
@@ -207,7 +208,7 @@ struct SafetyCheckin: Codable, Equatable, Identifiable {
             status: status,
             content: status.defaultContentJA,
             battery: battery,
-            location: .undisclosed,
+            location: location,
             relay: SafetyRelayMetadata(
                 delivery: .direct,
                 hops: nil,
@@ -217,6 +218,22 @@ struct SafetyCheckin: Codable, Equatable, Identifiable {
             ),
             needs: needs,
             expiresAt: timestamp + 3600
+        )
+    }
+
+    /// Returns a copy of this check-in with a different location (same id /
+    /// status / battery / expiry). Used to attach precise location for a
+    /// directed, encrypted send while the broadcast copy stays coarse.
+    func withLocation(_ location: SafetyLocation) -> SafetyCheckin {
+        SafetyCheckin(
+            id: id,
+            status: status,
+            content: content,
+            battery: battery,
+            location: location,
+            relay: relay,
+            needs: needs,
+            expiresAt: expiresAt
         )
     }
 }

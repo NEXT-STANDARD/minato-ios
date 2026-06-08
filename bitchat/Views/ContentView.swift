@@ -1156,6 +1156,7 @@ struct ContentView: View {
             titleVisibility: .visible
         ) {
             Button("起動する", role: .destructive) {
+                viewModel.prepareSafetyLocation()
                 safetyStore.activate()
                 viewModel.broadcastSafetyCheckin(safetyStore.checkin)
                 viewModel.startSafetyBroadcast()
