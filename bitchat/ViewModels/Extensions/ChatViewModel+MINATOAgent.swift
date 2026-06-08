@@ -60,6 +60,17 @@ extension ChatViewModel {
         (meshService as? BLEService)?.sendSafetyCheckin(checkin)
     }
 
+    /// Begin battery-throttled periodic re-broadcast (E-3b). Call on activation,
+    /// after the initial broadcast.
+    func startSafetyBroadcast() {
+        safetyBroadcastScheduler.start()
+    }
+
+    /// Stop periodic re-broadcast when leaving disaster mode.
+    func stopSafetyBroadcast() {
+        safetyBroadcastScheduler.stop()
+    }
+
     // MARK: - MINATO Agent Message Delegate
 
     func didReceiveAgentMessage(from peerID: PeerID, content: String, translatedContent: String?, intent: String?, timestamp: Date) {

@@ -13,6 +13,9 @@ struct DisasterModeView: View {
     /// Called with the current check-in whenever the owner changes status, so the
     /// caller can broadcast it to the mesh.
     var onBroadcast: (SafetyCheckin) -> Void = { _ in }
+    /// Called when the owner ends disaster mode, so the caller can stop the
+    /// periodic re-broadcast and deactivate.
+    var onDeactivate: () -> Void = {}
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -26,6 +29,9 @@ struct DisasterModeView: View {
                     primaryActions
                     nearbyInformation
                     policyNote
+                    if store.isActive {
+                        deactivateButton
+                    }
                 }
                 .padding(18)
             }
@@ -170,6 +176,17 @@ struct DisasterModeView: View {
                 .foregroundColor(secondaryTextColor)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private var deactivateButton: some View {
+        Button(role: .destructive) {
+            onDeactivate()
+        } label: {
+            Label("災害モードを終了", systemImage: "stop.circle")
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(.bordered)
+        .tint(.red)
     }
 
     private func actionButton(status: SafetyStatus, icon: String) -> some View {

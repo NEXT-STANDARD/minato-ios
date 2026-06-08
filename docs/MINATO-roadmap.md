@@ -173,10 +173,18 @@
 - [x] DisasterModeView の status 変更/起動で送信トリガ配線（ContentView → ChatViewModel → BLEService）
 - [x] テスト: store dedupe/expiry/cap、TOFU 検証、delivery メタデータ
 
-### Track E-3b: 周期再送 + 電池スロットリング（保留）
-- 起動中の定期再ブロードキャスト
-- low battery / low power mode で送信頻度を抑制（送信間隔判定は純関数でテスト）
-- 実機必須（Simulator 検証不可）のため分離
+### Track E-3b: 周期再送 + 電池スロットリング
+**ステータス**: 完了（2026-06-08）
+
+> 送信間隔判定は純関数 `SafetyBroadcastPolicy.interval(for:)`、ループは DI された `SafetyBroadcastScheduler`（タイマー注入でテスト可能）。実タイマー/実送信のみ実機必須。
+
+- [x] `SafetyBroadcastPolicy` — contact window + low power mode で間隔を算出（base 5分、上限 30分、停止はしない）
+- [x] `SafetyBroadcastScheduler` — DI タイマーで throttled 再送ループ（start/stop、tick で再サンプリング→再送→再スケジュール、check-in 消失時は静かに停止）
+- [x] `ChatViewModel` 配線（`startSafetyBroadcast`/`stopSafetyBroadcast`、起動で開始）
+- [x] DisasterModeView に「災害モードを終了」（deactivate→停止）
+- [x] テスト: 間隔ポリシー、スケジューラ（開始/tick再送・再スケジュール/電池変化追従/停止/冪等/check-in消失停止）
+
+> 注: 実 BLE 送信と実タイマー挙動は Simulator 不可。ロジックは全て単体テスト済み。
 
 ---
 
