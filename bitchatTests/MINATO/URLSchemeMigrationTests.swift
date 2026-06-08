@@ -55,14 +55,14 @@ struct URLSchemeMigrationTests {
         )
     }
 
-    @Test("verification QR is emitted with the legacy scheme (cross-device interop)")
-    func qrEmitsLegacyScheme() {
+    @Test("verification QR is now emitted with the minato:// scheme (Phase 2)")
+    func qrEmitsMinatoScheme() {
         let s = sampleQR().toURLString()
-        #expect(s.hasPrefix("bitchat://verify"))
+        #expect(s.hasPrefix("minato://verify"))
     }
 
-    @Test("verification QR round-trips from its own (legacy) URL")
-    func qrRoundTripLegacy() {
+    @Test("verification QR round-trips from its own (minato) URL")
+    func qrRoundTrip() {
         let qr = sampleQR()
         let url = URL(string: qr.toURLString())
         let parsed = url.flatMap { VerificationService.VerificationQR.fromURL($0) }
@@ -72,11 +72,11 @@ struct URLSchemeMigrationTests {
         #expect(parsed?.nickname == "alice")
     }
 
-    @Test("verification QR also parses from a minato:// URL (forward compatible)")
-    func qrAcceptsMinatoScheme() {
-        let legacy = sampleQR().toURLString()
-        let migrated = legacy.replacingOccurrences(of: "bitchat://", with: "minato://")
-        let parsed = URL(string: migrated).flatMap { VerificationService.VerificationQR.fromURL($0) }
+    @Test("verification QR still parses a legacy bitchat:// code (backward compatible)")
+    func qrAcceptsLegacyScheme() {
+        let current = sampleQR().toURLString()
+        let legacy = current.replacingOccurrences(of: "minato://", with: "bitchat://")
+        let parsed = URL(string: legacy).flatMap { VerificationService.VerificationQR.fromURL($0) }
         let ok = parsed != nil
         #expect(ok)
         #expect(parsed?.signKeyHex == "ddeeff")
@@ -84,8 +84,8 @@ struct URLSchemeMigrationTests {
 
     @Test("verification QR rejects an unknown scheme")
     func qrRejectsUnknownScheme() {
-        let legacy = sampleQR().toURLString()
-        let evil = legacy.replacingOccurrences(of: "bitchat://", with: "evil://")
+        let current = sampleQR().toURLString()
+        let evil = current.replacingOccurrences(of: "minato://", with: "evil://")
         let parsed = URL(string: evil).flatMap { VerificationService.VerificationQR.fromURL($0) }
         let rejected = parsed == nil
         #expect(rejected)

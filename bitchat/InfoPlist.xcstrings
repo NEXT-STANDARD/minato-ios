@@ -1,0 +1,1438 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSBluetoothAlwaysUsageDescription": {
+      "comment": "iOS permission usage description (MINATO).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO uses Bluetooth to create a secure mesh network for chatting with nearby people, even when you are offline."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يستخدم تطبيق MINATO البلوتوث لإنشاء شبكة متداخلة آمنة للدردشة مع الأشخاص القريبين منك، حتى عندما تكون غير متصل بالإنترنت."
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "আপনি অফলাইন থাকলেও কাছাকাছি মানুষের সঙ্গে চ্যাট করার জন্য একটি নিরাপদ মেশ নেটওয়ার্ক তৈরি করতে MINATO ব্লুটুথ ব্যবহার করে।"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO nutzt Bluetooth, um ein sicheres Mesh-Netzwerk aufzubauen, damit du auch offline mit Menschen in der Nähe chatten kannst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa Bluetooth para crear una red en malla segura y chatear con personas cercanas, incluso sin conexión."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ginagamit ng MINATO ang Bluetooth para gumawa ng ligtas na mesh network para makapag-chat ka sa mga taong malapit sa iyo, kahit offline ka."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO utilise le Bluetooth pour créer un réseau maillé sécurisé permettant de discuter avec les personnes à proximité, même hors connexion."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏MINATO משתמש ב-Bluetooth כדי ליצור רשת מאוגדת מאובטחת לשיחה עם אנשים בקרבתך, גם כשאתה לא מחובר לאינטרנט."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ब्लूटूथ का उपयोग एक सुरक्षित मेश नेटवर्क बनाने के लिए करता है, ताकि ऑफ़लाइन होने पर भी आप आस-पास के लोगों से चैट कर सकें।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan Bluetooth untuk membentuk jaringan mesh yang aman agar Anda bisa mengobrol dengan orang-orang di sekitar, bahkan saat sedang luring."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa il Bluetooth per creare una rete mesh sicura e chattare con le persone vicine, anche quando sei offline."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATOはBluetoothを使用して、オフラインのときでも近くの人と安全にチャットできるメッシュネットワークを構築します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO는 Bluetooth를 사용해 안전한 메시 네트워크를 만들어, 오프라인일 때도 근처 사람들과 대화할 수 있도록 합니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan Bluetooth untuk mewujudkan rangkaian mesh yang selamat bagi membolehkan anda berbual dengan orang berdekatan, walaupun ketika anda di luar talian."
+          }
+        },
+        "ne": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "तपाईं अफलाइन हुँदा पनि नजिकका मानिसहरूसँग कुराकानी गर्न MINATO ले सुरक्षित मेस नेटवर्क बनाउन Bluetooth प्रयोग गर्छ।"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO gebruikt Bluetooth om een beveiligd mesh-netwerk op te zetten waarmee je kunt chatten met mensen in de buurt, zelfs als je offline bent."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO używa Bluetooth, aby utworzyć bezpieczną sieć kratową do rozmów z osobami w pobliżu, nawet gdy jesteś offline."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO utiliza o Bluetooth para criar uma rede mesh segura, permitindo conversar com pessoas próximas mesmo quando está offline."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO usa o Bluetooth para criar uma rede mesh segura e conversar com pessoas por perto, mesmo quando você está offline."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO использует Bluetooth для создания защищённой mesh-сети, позволяющей общаться с людьми поблизости даже без подключения к интернету."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO använder Bluetooth för att skapa ett säkert mesh-nätverk så att du kan chatta med personer i närheten, även när du är offline."
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "நீங்கள் ஆஃப்லைனில் இருக்கும்போதும் அருகிலுள்ளவர்களுடன் அரட்டையடிக்க, பாதுகாப்பான மெஷ் வலையமைப்பை உருவாக்க MINATO ப்ளூடூத்தைப் பயன்படுத்துகிறது."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ใช้ Bluetooth เพื่อสร้างเครือข่ายแบบเมชที่ปลอดภัยสำหรับพูดคุยกับผู้คนที่อยู่ใกล้เคียง แม้ในขณะที่คุณออฟไลน์"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO, çevrimdışıyken bile yakınınızdaki kişilerle sohbet edebilmeniz için güvenli bir ağ örgüsü oluşturmak amacıyla Bluetooth'u kullanır."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO використовує Bluetooth, щоб створювати захищену mesh-мережу для спілкування з людьми поблизу навіть без підключення до Інтернету."
+          }
+        },
+        "ur": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO قریبی لوگوں سے بات چیت کے لیے ایک محفوظ میش نیٹ ورک بنانے کی غرض سے Bluetooth استعمال کرتا ہے، چاہے آپ آف لائن ہی کیوں نہ ہوں۔"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO sử dụng Bluetooth để tạo mạng lưới mesh an toàn, giúp bạn trò chuyện với những người ở gần ngay cả khi không có kết nối mạng."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用蓝牙构建安全的网状网络，让你在离线时也能与附近的人聊天。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用藍牙建立安全的網狀網路，即使在離線時也能與附近的人聊天。"
+          }
+        }
+      }
+    },
+    "NSBluetoothPeripheralUsageDescription": {
+      "comment": "iOS permission usage description (MINATO).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO uses Bluetooth to discover and connect with other MINATO users nearby."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يستخدم تطبيق MINATO البلوتوث لاكتشاف مستخدمي MINATO الآخرين القريبين منك والاتصال بهم."
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "কাছাকাছি থাকা অন্য MINATO ব্যবহারকারীদের খুঁজে পেতে ও তাদের সঙ্গে সংযোগ স্থাপন করতে MINATO ব্লুটুথ ব্যবহার করে।"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO nutzt Bluetooth, um andere MINATO-Nutzer in der Nähe zu finden und sich mit ihnen zu verbinden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa Bluetooth para descubrir y conectarse con otros usuarios de MINATO que estén cerca."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ginagamit ng MINATO ang Bluetooth para matuklasan at makakonekta sa iba pang gumagamit ng MINATO na malapit sa iyo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO utilise le Bluetooth pour détecter les autres utilisateurs de MINATO à proximité et s'y connecter."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏MINATO משתמש ב-Bluetooth כדי לאתר משתמשי MINATO אחרים בקרבתך ולהתחבר אליהם."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ब्लूटूथ का उपयोग आस-पास मौजूद अन्य MINATO उपयोगकर्ताओं को खोजने और उनसे कनेक्ट होने के लिए करता है।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan Bluetooth untuk menemukan dan terhubung dengan pengguna MINATO lain di sekitar Anda."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa il Bluetooth per rilevare e connettersi ad altri utenti MINATO nelle vicinanze."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATOはBluetoothを使用して、近くにいるほかのMINATO利用者を検出して接続します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO는 Bluetooth를 사용해 근처에 있는 다른 MINATO 사용자를 찾아 연결합니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan Bluetooth untuk mencari dan menyambung dengan pengguna MINATO lain yang berdekatan."
+          }
+        },
+        "ne": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ले नजिकका अन्य MINATO प्रयोगकर्ताहरू पत्ता लगाउन र जोडिन Bluetooth प्रयोग गर्छ।"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO gebruikt Bluetooth om andere MINATO-gebruikers in de buurt te vinden en ermee verbinding te maken."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO używa Bluetooth, aby wykrywać i łączyć się z innymi użytkownikami MINATO w pobliżu."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO utiliza o Bluetooth para descobrir e estabelecer ligação com outros utilizadores do MINATO nas proximidades."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO usa o Bluetooth para descobrir e se conectar com outros usuários do MINATO por perto."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO использует Bluetooth для обнаружения других пользователей MINATO поблизости и подключения к ним."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO använder Bluetooth för att hitta och ansluta till andra MINATO-användare i närheten."
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "அருகிலுள்ள மற்ற MINATO பயனர்களைக் கண்டறிந்து இணைக்க MINATO ப்ளூடூத்தைப் பயன்படுத்துகிறது."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ใช้ Bluetooth เพื่อค้นหาและเชื่อมต่อกับผู้ใช้ MINATO คนอื่นที่อยู่ใกล้เคียง"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO, yakınınızdaki diğer MINATO kullanıcılarını bulmak ve onlarla bağlantı kurmak için Bluetooth'u kullanır."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO використовує Bluetooth, щоб знаходити інших користувачів MINATO поблизу та підключатися до них."
+          }
+        },
+        "ur": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO قریب موجود دیگر MINATO صارفین کو تلاش کرنے اور ان سے رابطہ قائم کرنے کے لیے Bluetooth استعمال کرتا ہے۔"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO sử dụng Bluetooth để tìm và kết nối với những người dùng MINATO khác ở gần."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用蓝牙发现并连接附近的其他 MINATO 用户。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用藍牙探索並連接附近的其他 MINATO 使用者。"
+          }
+        }
+      }
+    },
+    "NSCalendarsFullAccessUsageDescription": {
+      "comment": "iOS permission usage description (MINATO).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO adds events you agree on while scheduling to your calendar."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يضيف تطبيق MINATO إلى تقويمك المواعيد التي تتفق عليها أثناء تنسيق الجدول."
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "সময়সূচি ঠিক করার সময় আপনি যেসব ইভেন্টে সম্মত হন, MINATO সেগুলো আপনার ক্যালেন্ডারে যোগ করে।"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO fügt Termine, die du bei der Planung vereinbarst, zu deinem Kalender hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO añade a tu calendario los eventos que acuerdas al organizar tus planes."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idinadagdag ng MINATO sa iyong kalendaryo ang mga kaganapang napagkasunduan ninyo habang nag-iiskedyul."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ajoute à votre calendrier les événements convenus lors de la planification."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏MINATO מוסיף ליומן שלך אירועים שעליהם הסכמת במהלך תיאום מועדים."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शेड्यूल करते समय आप जिन कार्यक्रमों पर सहमत होते हैं, MINATO उन्हें आपके कैलेंडर में जोड़ देता है।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menambahkan acara yang Anda sepakati saat menjadwalkan ke kalender Anda."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO aggiunge al tuo calendario gli eventi che concordi durante la pianificazione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATOは、予定を調整する際に合意したイベントをカレンダーに追加します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO는 일정을 조율하며 합의한 이벤트를 캘린더에 추가합니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menambah acara yang anda persetujui semasa penjadualan ke dalam kalendar anda."
+          }
+        },
+        "ne": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "समय मिलाउँदा तपाईंले सहमति जनाएका कार्यक्रमहरू MINATO ले तपाईंको पात्रोमा थप्छ।"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO voegt afspraken die je tijdens het plannen overeenkomt toe aan je agenda."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO dodaje do Twojego kalendarza wydarzenia uzgodnione podczas planowania."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO adiciona ao seu calendário os eventos que combinar ao agendar."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO adiciona ao seu calendário os eventos que você combina durante o agendamento."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO добавляет в ваш календарь события, которые вы согласовали при планировании."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO lägger till händelser som ni kommer överens om under planeringen i din kalender."
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "திட்டமிடும்போது நீங்கள் ஒப்புக்கொள்ளும் நிகழ்வுகளை MINATO உங்கள் காலெண்டரில் சேர்க்கிறது."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO จะเพิ่มกิจกรรมที่คุณตกลงร่วมกันระหว่างการนัดหมายลงในปฏิทินของคุณ"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO, planlama sırasında üzerinde uzlaştığınız etkinlikleri takviminize ekler."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO додає до вашого календаря події, які ви узгодили під час планування."
+          }
+        },
+        "ur": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO شیڈولنگ کے دوران جن ایونٹس پر آپ متفق ہوتے ہیں، انہیں آپ کے کیلنڈر میں شامل کر دیتا ہے۔"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO thêm vào lịch của bạn những sự kiện mà bạn đã thống nhất khi lên lịch hẹn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 会将你在安排日程时确认的活动添加到你的日历中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 會將你在安排行程時雙方同意的活動加入你的行事曆。"
+          }
+        }
+      }
+    },
+    "NSCalendarsUsageDescription": {
+      "comment": "iOS permission usage description (MINATO).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO adds events you agree on while scheduling to your calendar."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يضيف تطبيق MINATO إلى تقويمك المواعيد التي تتفق عليها أثناء تنسيق الجدول."
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "সময়সূচি ঠিক করার সময় আপনি যেসব ইভেন্টে সম্মত হন, MINATO সেগুলো আপনার ক্যালেন্ডারে যোগ করে।"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO fügt Termine, die du bei der Planung vereinbarst, zu deinem Kalender hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO añade a tu calendario los eventos que acuerdas al organizar tus planes."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idinadagdag ng MINATO sa iyong kalendaryo ang mga kaganapang napagkasunduan ninyo habang nag-iiskedyul."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ajoute à votre calendrier les événements convenus lors de la planification."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏MINATO מוסיף ליומן שלך אירועים שעליהם הסכמת במהלך תיאום מועדים."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शेड्यूल करते समय आप जिन कार्यक्रमों पर सहमत होते हैं, MINATO उन्हें आपके कैलेंडर में जोड़ देता है।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menambahkan acara yang Anda sepakati saat menjadwalkan ke kalender Anda."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO aggiunge al tuo calendario gli eventi che concordi durante la pianificazione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATOは、予定を調整する際に合意したイベントをカレンダーに追加します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO는 일정을 조율하며 합의한 이벤트를 캘린더에 추가합니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menambah acara yang anda persetujui semasa penjadualan ke dalam kalendar anda."
+          }
+        },
+        "ne": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "समय मिलाउँदा तपाईंले सहमति जनाएका कार्यक्रमहरू MINATO ले तपाईंको पात्रोमा थप्छ।"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO voegt afspraken die je tijdens het plannen overeenkomt toe aan je agenda."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO dodaje do Twojego kalendarza wydarzenia uzgodnione podczas planowania."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO adiciona ao seu calendário os eventos que combinar ao agendar."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO adiciona ao seu calendário os eventos que você combina durante o agendamento."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO добавляет в ваш календарь события, которые вы согласовали при планировании."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO lägger till händelser som ni kommer överens om under planeringen i din kalender."
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "திட்டமிடும்போது நீங்கள் ஒப்புக்கொள்ளும் நிகழ்வுகளை MINATO உங்கள் காலெண்டரில் சேர்க்கிறது."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO จะเพิ่มกิจกรรมที่คุณตกลงร่วมกันระหว่างการนัดหมายลงในปฏิทินของคุณ"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO, planlama sırasında üzerinde uzlaştığınız etkinlikleri takviminize ekler."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO додає до вашого календаря події, які ви узгодили під час планування."
+          }
+        },
+        "ur": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO شیڈولنگ کے دوران جن ایونٹس پر آپ متفق ہوتے ہیں، انہیں آپ کے کیلنڈر میں شامل کر دیتا ہے۔"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO thêm vào lịch của bạn những sự kiện mà bạn đã thống nhất khi lên lịch hẹn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 会将你在安排日程时确认的活动添加到你的日历中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 會將你在安排行程時雙方同意的活動加入你的行事曆。"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription": {
+      "comment": "iOS permission usage description (MINATO).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO uses the camera to scan QR codes that verify the people you chat with."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يستخدم تطبيق MINATO الكاميرا لمسح رموز QR التي تتحقق من هوية الأشخاص الذين تتحدث معهم."
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "আপনি যাদের সঙ্গে চ্যাট করেন তাদের যাচাই করার জন্য QR কোড স্ক্যান করতে MINATO ক্যামেরা ব্যবহার করে।"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO nutzt die Kamera, um QR-Codes zu scannen und so die Personen zu verifizieren, mit denen du chattest."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa la cámara para escanear códigos QR que verifican la identidad de las personas con las que chateas."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ginagamit ng MINATO ang camera para mag-scan ng mga QR code na nagpapatunay sa mga taong kausap mo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO utilise l'appareil photo pour scanner les codes QR qui permettent de vérifier l'identité des personnes avec qui vous discutez."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏MINATO משתמש במצלמה כדי לסרוק קודי QR שמאמתים את האנשים שאתה משוחח איתם."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO कैमरे का उपयोग उन QR कोड को स्कैन करने के लिए करता है, जो उन लोगों की पुष्टि करते हैं जिनसे आप चैट करते हैं।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan kamera untuk memindai kode QR yang memverifikasi orang-orang yang Anda ajak mengobrol."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa la fotocamera per scansionare i codici QR che verificano le persone con cui chatti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATOはカメラを使用して、チャット相手を確認するためのQRコードを読み取ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO는 카메라를 사용해 대화 상대를 확인하는 QR 코드를 스캔합니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan kamera untuk mengimbas kod QR bagi mengesahkan identiti orang yang anda berbual dengannya."
+          }
+        },
+        "ne": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "तपाईंले कुराकानी गर्ने मानिसहरूको पहिचान प्रमाणित गर्ने QR कोडहरू स्क्यान गर्न MINATO ले क्यामेरा प्रयोग गर्छ।"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO gebruikt de camera om QR-codes te scannen die de identiteit bevestigen van de mensen met wie je chat."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO używa aparatu do skanowania kodów QR, które weryfikują osoby, z którymi rozmawiasz."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO utiliza a câmara para ler códigos QR que verificam as pessoas com quem conversa."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO usa a câmera para ler códigos QR que verificam a identidade das pessoas com quem você conversa."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO использует камеру для сканирования QR-кодов, подтверждающих личность собеседников."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO använder kameran för att skanna QR-koder som verifierar personerna du chattar med."
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "நீங்கள் அரட்டையடிப்பவர்களை சரிபார்க்கும் QR குறியீடுகளை ஸ்கேன் செய்ய MINATO கேமராவைப் பயன்படுத்துகிறது."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ใช้กล้องเพื่อสแกนรหัส QR สำหรับยืนยันตัวตนของผู้ที่คุณพูดคุยด้วย"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO, sohbet ettiğiniz kişileri doğrulayan QR kodlarını taramak için kamerayı kullanır."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO використовує камеру, щоб сканувати QR-коди для підтвердження особи людей, з якими ви спілкуєтеся."
+          }
+        },
+        "ur": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO کیمرا استعمال کر کے ان QR کوڈز کو اسکین کرتا ہے جو ان لوگوں کی تصدیق کرتے ہیں جن سے آپ بات چیت کرتے ہیں۔"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO sử dụng camera để quét mã QR nhằm xác minh những người bạn trò chuyện cùng."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用相机扫描二维码，以验证与你聊天的人的身份。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用相機掃描 QR 碼，以驗證與你聊天的對象身分。"
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription": {
+      "comment": "iOS permission usage description (MINATO).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO uses your approximate location to find local public channels and share your area in disaster mode. Your exact GPS location is never shared automatically."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يستخدم تطبيق MINATO موقعك التقريبي للعثور على القنوات العامة المحلية ولمشاركة منطقتك في وضع الكوارث. لا تتم مشاركة موقعك الدقيق عبر GPS تلقائيًا أبدًا."
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "স্থানীয় পাবলিক চ্যানেল খুঁজে পেতে এবং দুর্যোগ মোডে আপনার এলাকা শেয়ার করতে MINATO আপনার আনুমানিক অবস্থান ব্যবহার করে। আপনার সঠিক GPS অবস্থান কখনও স্বয়ংক্রিয়ভাবে শেয়ার করা হয় না।"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO nutzt deinen ungefähren Standort, um lokale öffentliche Kanäle zu finden und im Katastrophenmodus deine Umgebung zu teilen. Dein genauer GPS-Standort wird niemals automatisch geteilt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa tu ubicación aproximada para encontrar canales públicos locales y compartir tu zona en el modo de emergencia. Tu ubicación exacta de GPS nunca se comparte automáticamente."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ginagamit ng MINATO ang iyong tinatayang lokasyon para makahanap ng mga lokal na pampublikong channel at maibahagi ang iyong lugar sa disaster mode. Hindi kailanman awtomatikong ibinabahagi ang eksaktong lokasyon mo sa GPS."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO utilise votre position approximative pour trouver les canaux publics locaux et partager votre secteur en mode catastrophe. Votre position GPS exacte n'est jamais partagée automatiquement."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏MINATO משתמש במיקומך המשוער כדי למצוא ערוצים ציבוריים מקומיים ולשתף את האזור שלך במצב חירום. מיקום ה-GPS המדויק שלך לעולם אינו משותף באופן אוטומטי."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO आपके अनुमानित स्थान का उपयोग स्थानीय सार्वजनिक चैनल खोजने और आपदा मोड में आपके क्षेत्र को साझा करने के लिए करता है। आपका सटीक GPS स्थान कभी भी स्वतः साझा नहीं किया जाता।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan perkiraan lokasi Anda untuk menemukan kanal publik lokal dan membagikan area Anda dalam mode darurat. Lokasi GPS persis Anda tidak pernah dibagikan secara otomatis."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa la tua posizione approssimativa per trovare i canali pubblici locali e condividere la tua zona in modalità emergenza. La tua posizione GPS esatta non viene mai condivisa automaticamente."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATOはおおよその位置情報を使用して、地域の公開チャンネルを見つけたり、災害モードであなたのエリアを共有したりします。正確なGPS位置情報が自動的に共有されることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO는 대략적인 위치를 사용해 주변 공개 채널을 찾고, 재난 모드에서 사용자가 있는 지역을 공유합니다. 정확한 GPS 위치는 자동으로 공유되지 않습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan lokasi anggaran anda untuk mencari saluran awam tempatan dan berkongsi kawasan anda dalam mod bencana. Lokasi GPS tepat anda tidak sekali-kali dikongsi secara automatik."
+          }
+        },
+        "ne": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्थानीय सार्वजनिक च्यानलहरू खोज्न र विपद् मोडमा तपाईंको क्षेत्र साझा गर्न MINATO ले तपाईंको अनुमानित स्थान प्रयोग गर्छ। तपाईंको सटीक GPS स्थान कहिल्यै स्वतः साझा गरिँदैन।"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO gebruikt je geschatte locatie om lokale openbare kanalen te vinden en je gebied te delen in de rampmodus. Je exacte GPS-locatie wordt nooit automatisch gedeeld."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO używa Twojej przybliżonej lokalizacji, aby znajdować lokalne kanały publiczne i udostępniać Twój obszar w trybie katastrofy. Twoja dokładna lokalizacja GPS nigdy nie jest udostępniana automatycznie."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO utiliza a sua localização aproximada para encontrar canais públicos locais e partilhar a sua zona no modo de catástrofe. A sua localização GPS exata nunca é partilhada automaticamente."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO usa sua localização aproximada para encontrar canais públicos locais e compartilhar sua região no modo de desastre. Sua localização exata de GPS nunca é compartilhada automaticamente."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO использует ваше приблизительное местоположение, чтобы находить местные публичные каналы и делиться вашим районом в режиме чрезвычайной ситуации. Точные GPS-координаты никогда не передаются автоматически."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO använder din ungefärliga plats för att hitta lokala publika kanaler och dela ditt område i katastrofläge. Din exakta GPS-position delas aldrig automatiskt."
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "உள்ளூர் பொது சேனல்களைக் கண்டறியவும், பேரிடர் பயன்முறையில் உங்கள் பகுதியைப் பகிரவும் MINATO உங்கள் தோராயமான இருப்பிடத்தைப் பயன்படுத்துகிறது. உங்கள் சரியான GPS இருப்பிடம் ஒருபோதும் தானாகப் பகிரப்படாது."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ใช้ตำแหน่งโดยประมาณของคุณเพื่อค้นหาช่องสาธารณะในพื้นที่และแบ่งปันบริเวณของคุณในโหมดภัยพิบัติ ตำแหน่ง GPS ที่แม่นยำของคุณจะไม่ถูกแบ่งปันโดยอัตโนมัติ"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO, yerel açık kanalları bulmak ve afet modunda bulunduğunuz bölgeyi paylaşmak için yaklaşık konumunuzu kullanır. Tam GPS konumunuz hiçbir zaman otomatik olarak paylaşılmaz."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO використовує ваше приблизне місцезнаходження, щоб знаходити місцеві публічні канали та повідомляти про ваш район у режимі стихійного лиха. Ваше точне GPS-розташування ніколи не передається автоматично."
+          }
+        },
+        "ur": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO مقامی عوامی چینلز تلاش کرنے اور آفت زدہ موڈ میں آپ کا علاقہ شیئر کرنے کے لیے آپ کا تخمینی محل وقوع استعمال کرتا ہے۔ آپ کا درست GPS محل وقوع کبھی بھی خودکار طور پر شیئر نہیں کیا جاتا۔"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO sử dụng vị trí gần đúng của bạn để tìm các kênh công khai trong khu vực và chia sẻ khu vực của bạn ở chế độ thảm họa. Vị trí GPS chính xác của bạn không bao giờ được chia sẻ tự động."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用你的大致位置来查找本地公共频道，并在灾害模式下分享你所在的区域。你的精确 GPS 位置绝不会被自动分享。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用你的概略位置來尋找當地的公開頻道，並在災害模式下分享你所在的區域。你的精確 GPS 位置絕不會自動分享。"
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "comment": "iOS permission usage description (MINATO).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO uses the microphone to record voice notes that relay across the mesh."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يستخدم تطبيق MINATO الميكروفون لتسجيل ملاحظات صوتية يتم تمريرها عبر الشبكة المتداخلة."
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "মেশ নেটওয়ার্কের মাধ্যমে রিলে হওয়া ভয়েস নোট রেকর্ড করতে MINATO মাইক্রোফোন ব্যবহার করে।"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO nutzt das Mikrofon, um Sprachnachrichten aufzunehmen, die über das Mesh-Netzwerk weitergeleitet werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa el micrófono para grabar notas de voz que se retransmiten por la red en malla."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ginagamit ng MINATO ang mikropono para mag-record ng mga voice note na ipinapasa sa buong mesh network."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO utilise le microphone pour enregistrer des notes vocales qui sont relayées à travers le réseau maillé."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏MINATO משתמש במיקרופון כדי להקליט הודעות קוליות שמועברות לאורך הרשת המאוגדת."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO माइक्रोफ़ोन का उपयोग वॉइस नोट रिकॉर्ड करने के लिए करता है, जो मेश नेटवर्क के ज़रिए आगे पहुँचाए जाते हैं।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan mikrofon untuk merekam pesan suara yang diteruskan melalui jaringan mesh."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO usa il microfono per registrare note vocali che si propagano attraverso la rete mesh."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATOはマイクを使用して、メッシュネットワーク経由で中継されるボイスメモを録音します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO는 마이크를 사용해 메시 네트워크를 통해 전달되는 음성 메모를 녹음합니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO menggunakan mikrofon untuk merakam nota suara yang dihantar merentasi rangkaian mesh."
+          }
+        },
+        "ne": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेस नेटवर्कमार्फत पुग्ने भ्वाइस नोटहरू रेकर्ड गर्न MINATO ले माइक्रोफोन प्रयोग गर्छ।"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO gebruikt de microfoon om spraakberichten op te nemen die via het mesh-netwerk worden doorgegeven."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO używa mikrofonu do nagrywania notatek głosowych przekazywanych w sieci kratowej."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO utiliza o microfone para gravar notas de voz que são retransmitidas pela rede mesh."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO usa o microfone para gravar notas de voz que são retransmitidas pela rede mesh."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO использует микрофон для записи голосовых сообщений, которые передаются через mesh-сеть."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO använder mikrofonen för att spela in röstmeddelanden som vidarebefordras genom mesh-nätverket."
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "மெஷ் வலையமைப்பு வழியாக அனுப்பப்படும் குரல் குறிப்புகளைப் பதிவு செய்ய MINATO மைக்ரோஃபோனைப் பயன்படுத்துகிறது."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ใช้ไมโครโฟนเพื่อบันทึกข้อความเสียงที่ส่งต่อผ่านเครือข่ายแบบเมช"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO, ağ örgüsü üzerinden aktarılan sesli notlar kaydetmek için mikrofonu kullanır."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO використовує мікрофон, щоб записувати голосові нотатки, які передаються через mesh-мережу."
+          }
+        },
+        "ur": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO مائیکروفون استعمال کر کے ایسے صوتی پیغامات ریکارڈ کرتا ہے جو میش نیٹ ورک پر آگے پہنچائے جاتے ہیں۔"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO sử dụng micrô để ghi lại các ghi chú thoại được chuyển tiếp qua mạng lưới mesh."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用麦克风录制语音留言，并通过网状网络进行转发。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 使用麥克風錄製語音留言，並透過網狀網路轉送給其他人。"
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription": {
+      "comment": "iOS permission usage description (MINATO).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO lets you pick photos from your library to share with nearby people."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يتيح لك تطبيق MINATO اختيار الصور من مكتبتك لمشاركتها مع الأشخاص القريبين منك."
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "কাছাকাছি মানুষের সঙ্গে শেয়ার করার জন্য MINATO আপনাকে আপনার লাইব্রেরি থেকে ছবি বেছে নিতে দেয়।"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ermöglicht dir, Fotos aus deiner Mediathek auszuwählen, um sie mit Menschen in der Nähe zu teilen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO te permite elegir fotos de tu galería para compartirlas con personas cercanas."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pinapayagan ka ng MINATO na pumili ng mga larawan mula sa iyong library para ibahagi sa mga taong malapit sa iyo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO vous permet de choisir des photos dans votre photothèque pour les partager avec les personnes à proximité."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏MINATO מאפשר לך לבחור תמונות מספריית התמונות שלך כדי לשתף אותן עם אנשים בקרבתך."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO आपको अपनी लाइब्रेरी से फ़ोटो चुनकर आस-पास के लोगों के साथ साझा करने देता है।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO memungkinkan Anda memilih foto dari galeri untuk dibagikan dengan orang-orang di sekitar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ti consente di scegliere foto dalla tua libreria da condividere con le persone vicine."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATOでは、ライブラリから写真を選んで近くの人と共有できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO에서 보관함의 사진을 선택해 근처 사람들과 공유할 수 있습니다."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO membolehkan anda memilih foto daripada pustaka anda untuk dikongsi dengan orang berdekatan."
+          }
+        },
+        "ne": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नजिकका मानिसहरूसँग साझा गर्न MINATO ले तपाईंलाई आफ्नो ग्यालरीबाट फोटोहरू छान्न दिन्छ।"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO laat je foto's uit je bibliotheek kiezen om te delen met mensen in de buurt."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO pozwala wybierać zdjęcia z Twojej biblioteki, aby udostępniać je osobom w pobliżu."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO permite-lhe escolher fotografias da sua biblioteca para partilhar com pessoas próximas."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O MINATO permite que você escolha fotos da sua galeria para compartilhar com pessoas por perto."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO позволяет выбирать фотографии из вашей галереи, чтобы делиться ими с людьми поблизости."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO låter dig välja foton från ditt bildbibliotek för att dela med personer i närheten."
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "அருகிலுள்ளவர்களுடன் பகிர்ந்துகொள்ள உங்கள் தொகுப்பிலிருந்து புகைப்படங்களைத் தேர்ந்தெடுக்க MINATO உங்களை அனுமதிக்கிறது."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO ให้คุณเลือกรูปภาพจากคลังภาพเพื่อแบ่งปันกับผู้คนที่อยู่ใกล้เคียง"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO, yakınınızdaki kişilerle paylaşmak üzere kitaplığınızdan fotoğraf seçmenize olanak tanır."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO дозволяє вибирати фотографії з вашої медіатеки, щоб надсилати їх людям поблизу."
+          }
+        },
+        "ur": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO آپ کو اپنی لائبریری سے تصاویر منتخب کر کے قریبی لوگوں کے ساتھ شیئر کرنے کی سہولت دیتا ہے۔"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO cho phép bạn chọn ảnh từ thư viện để chia sẻ với những người ở gần."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 让你从相册中选取照片，与附近的人分享。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MINATO 讓你從相簿挑選照片，與附近的人分享。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
