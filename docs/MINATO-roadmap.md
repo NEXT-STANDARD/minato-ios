@@ -1,6 +1,6 @@
 # MINATO Agent Protocol — iOS 実装ロードマップ
 
-最終更新: 2026-05-11
+最終更新: 2026-06-08
 参照 spec: `NEXT-STANDARD/minato-spec` @ `3dc97b6` (2026-05-11)
 
 注意: `minato-ios` は `minato-spec` の思想を踏襲した派生実装のひとつ。iOS 側の実装都合をそのまま spec に反映しない。protocol 全体へ広げたい変更は、まず iOS 側 docs で shape を明文化し、必要な場合だけ spec への提案候補として分離する。
@@ -87,29 +87,78 @@
 - [x] **iOS**: `ActivityLogStore` で `log_id` 重複排除
 - [x] **iOS**: `AgentLogTests.swift` 追加（action mapping + payload round-trip + dedupe）
 
----
-
-## 未着手
-
 ### Track B: iOS message shape 整理（0x30〜0x37）
-次は spec 変更ではなく、iOS 側で現在の message shape を明文化する:
-- `docs/MINATO-message-shapes.md` 新設
-- 0x30〜0x37 の iOS 実装上の payload shape を一覧化
-- `AGENT_HANDSHAKE` は実装済み shape と検証方式を明記
-- `AGENT_PING` は現状 no-op heartbeat と明記
-- spec 反映候補は「提案候補」として分離
+**ステータス**: 完了（2026-05-11）
 
-### Track B-2: docs/ 充実
-- `docs/ja/MINATO_PROTOCOL.md` — 日本語版復元
-- `docs/en/` — 英語実装ガイド
+- [x] `docs/MINATO-message-shapes.md` 新設
+- [x] 0x30〜0x37 の iOS 実装上の payload shape を一覧化
+- [x] `AGENT_HANDSHAKE` は実装済み shape と検証方式を明記
+- [x] `AGENT_PING` は現状 no-op heartbeat と明記
+- [x] spec 反映候補は「提案候補」として分離
 
 ### Track C-2: iOS examples / golden test
-- iOS 側 docs/examples JSON を decode → re-encode して差分ゼロを確認
-- spec 連携は、提案候補が固まってから別トラックで扱う
+**ステータス**: 完了（2026-05-11）
+
+- [x] `docs/examples/minato-ios/` に 0x30〜0x37 の canonical JSON examples を追加
+- [x] iOS 側 docs/examples JSON を decode → re-encode して差分ゼロを確認
+- [x] spec 連携は、提案候補が固まってから別トラックで扱う
 
 ### Track D: ドキュメント運用
-- `CLAUDE.md` に「MINATO 署名フロー」セクション追加
-- spec 更新時の iOS 側追従チェックリストを `CLAUDE.md` に追記
+**ステータス**: 完了（2026-05-11）
+
+- [x] `CLAUDE.md` に「MINATO 署名フロー」セクション追加
+- [x] spec 更新時の iOS 側追従チェックリストを `CLAUDE.md` に追記
+
+### Track B-2: docs/ 充実
+**ステータス**: 完了（2026-05-11）
+
+- [x] `docs/ja/MINATO_PROTOCOL.md` — 日本語版復元
+- [x] `docs/en/IMPLEMENTATION_GUIDE.md` — 英語実装ガイド
+
+### Track E: Disaster Mode 設計
+**ステータス**: 設計完了（2026-05-11）
+
+- [x] `docs/MINATO-disaster-mode.md` 新設
+- [x] 安否確認 / 位置共有 / 助け合い情報の MVP scope を定義
+- [x] battery 情報を safety payload の初期表示・triage 必須要素として定義
+- [x] `safety.*` intents / capabilities の iOS proposal candidate を整理
+- [x] privacy / abuse risk / battery policy を明文化
+- [x] Phase 1〜5 の実装計画を定義
+
+---
+
+## 次期実装候補
+
+### Track E-1: Disaster Mode local models + UI（store / banner / dashboard）
+**ステータス**: 完了（2026-06-08）
+
+> 設計判断: `Safety*` を災害モードの正系実装とする。並行して存在していた
+> `Disaster*` 系（`Disaster.swift` の `DisasterStatus` / `DisasterModeStore` /
+> `BatteryMonitor`、PR #4/#5/#6 由来）は `Safety*` に統合し削除した。中央
+> `Capability`/`Intent` enum の `disaster.*` 追加も差し戻し、safety 名前空間は
+> `SafetyModels.swift` の `SafetyCapability`/`SafetyIntent` を単一の出所とする
+> （AgentCard への capability 統合は E-2 で扱う）。
+
+- [x] `SafetyStatus`(6値), `SafetyBatterySnapshot`, `SafetyLocation`, `SafetyRelayMetadata`, `SafetyCheckin` モデル追加
+- [x] iOS battery snapshot helper 追加（level/state/low power mode/contact window）— `BatterySnapshotProvider`
+- [x] `DisasterModeView` ダッシュボード（`無事です` / `助けが必要` / `家族を探す` / `近くの情報を見る`）
+- [x] local preview cards に battery / timestamp / location precision / relay status を表示
+- [x] `SafetyModeStore` 共有ストア（isActive / checkin / lastActiveAt、battery sampling 注入可能）
+- [x] `SafetyHeaderView` ホームバナー（OFF=起動 CTA / ON=現在ステータス表示）
+- [x] `ContentView` 配線（バナー → 起動確認ダイアログ → full-screen ダッシュボード）
+- [x] `SafetyPayloadTests` / `SafetyModeStoreTests` 追加
+
+### Track E-2: Safety payload integration
+- `safety.checkin` を `MINATOPayload` で encode/decode
+- safety-specific fields は初回 `payload.context` に格納
+- `docs/examples/minato-ios/safety_checkin.json` 追加
+- `docs/MINATO-message-shapes.md` に safety payload section を追記
+
+### Track E-3: BLE mesh relay
+- Disaster Mode safety check-ins を BLE mesh 送信
+- TTL / expiry / dedupe 実装
+- low battery / low power mode で送信頻度を抑制
+- direct vs relayed metadata を UI に表示
 
 ---
 
@@ -121,6 +170,8 @@
 | **Negotiation は in-memory のみ** | `NegotiationStore` は意図的に永続化なし。再起動時は再提案させる設計（`NegotiationStore.swift:6-11`）。 |
 | **AGENT_LOG は max 200件** | ActivityLogStore の設計上限。将来的にページネーション対応の余地あり。 |
 | **旧バージョン互換なし** | 署名実装前に `signature: nil` 端末が存在しないため一斉切替で可。 |
+| **Disaster Mode は coarse location default** | precise location は high-risk とし、明示確認または期限付き emergency override に限定する。 |
+| **battery は safety triage 必須情報** | `safety.*` payload には battery snapshot と reported_at を含め、初動判断に使う。 |
 
 ---
 
