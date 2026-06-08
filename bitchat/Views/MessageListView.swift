@@ -270,7 +270,8 @@ private extension MessageListView {
     }
 
     func handleOpenURL(_ url: URL) {
-        guard url.scheme == "bitchat" else { return }
+        // Accept both minato:// (new) and bitchat:// (legacy) deep links.
+        guard MinatoBrand.acceptsURLScheme(url.scheme) else { return }
         switch url.host {
         case "user":
             let id = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))

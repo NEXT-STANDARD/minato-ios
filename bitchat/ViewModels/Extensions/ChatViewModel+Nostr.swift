@@ -636,8 +636,9 @@ extension ChatViewModel {
                 return
             }
             
-            // Check if it's a BitChat packet embedded in the content (bitchat1:...)
-            if content.hasPrefix("bitchat1:") {
+            // Check if it's an embedded packet (bitchat1:… / minato1:…). Accept
+            // both prefixes for forward compatibility (Phase 1 of scheme migration).
+            if MinatoBrand.nostrEmbedPrefix(matching: content) != nil {
                 guard let packet = Self.decodeEmbeddedBitChatPacket(from: content) else {
                     SecureLogger.error("Failed to decode embedded BitChat packet from Nostr DM", category: .session)
                     return
@@ -819,8 +820,8 @@ extension ChatViewModel {
     }
 
     private static func decodeEmbeddedBitChatPacket(from content: String) -> BitchatPacket? {
-        guard content.hasPrefix("bitchat1:") else { return nil }
-        let encoded = String(content.dropFirst("bitchat1:".count))
+        guard let prefix = MinatoBrand.nostrEmbedPrefix(matching: content) else { return nil }
+        let encoded = String(content.dropFirst(prefix.count))
         let maxBytes = FileTransferLimits.maxFramedFileBytes
         // Base64url length upper bound for maxBytes (padded length; unpadded is <= this).
         let maxEncoded = ((maxBytes + 2) / 3) * 4

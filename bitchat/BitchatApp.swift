@@ -174,7 +174,9 @@ struct BitchatApp: App {
     }
     
     private func handleURL(_ url: URL) {
-        if url.scheme == "bitchat" && url.host == "share" {
+        // Accept both the new (minato) and legacy (bitchat) schemes — Phase 1 of
+        // the scheme migration (see MinatoBrand / docs/MINATO-url-scheme.md).
+        if MinatoBrand.acceptsURLScheme(url.scheme) && url.host == "share" {
             // Handle shared content
             checkForSharedContent()
         }

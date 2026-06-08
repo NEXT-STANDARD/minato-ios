@@ -2179,7 +2179,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
             let fontWeight: Font.Weight = isSelf ? .bold : .medium
             senderStyle.font = .bitchatSystem(size: 14, weight: fontWeight, design: .monospaced)
             // Make sender clickable: encode senderPeerID into a custom URL
-            if let spid = message.senderPeerID, let url = URL(string: "bitchat://user/\(spid.toPercentEncoded())") {
+            if let spid = message.senderPeerID, let url = URL(string: "\(MinatoBrand.urlScheme)://user/\(spid.toPercentEncoded())") {
                 senderStyle.link = url
             }
 
@@ -2357,7 +2357,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
                     } else {
                         // Style non-mention matches
                         if type == "hashtag" {
-                            // If the hashtag is a valid geohash, make it tappable (bitchat://geohash/<gh>)
+                            // If the hashtag is a valid geohash, make it tappable (minato://geohash/<gh>)
                             let token = String(matchText.dropFirst()).lowercased()
                             let allowed = Set("0123456789bcdefghjkmnpqrstuvwxyz")
                             let isGeohash = (2...12).contains(token.count) && token.allSatisfy { allowed.contains($0) }
@@ -2388,7 +2388,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
                                 ? .bitchatSystem(size: 14, weight: .bold, design: .monospaced)
                                 : .bitchatSystem(size: 14, design: .monospaced)
                             tagStyle.foregroundColor = baseColor
-                            if isGeohash && !attachedToMention && standalone, let url = URL(string: "bitchat://geohash/\(token)") {
+                            if isGeohash && !attachedToMention && standalone, let url = URL(string: "\(MinatoBrand.urlScheme)://geohash/\(token)") {
                                 tagStyle.link = url
                                 tagStyle.underlineStyle = .single
                             }
@@ -2506,7 +2506,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
         senderStyle.foregroundColor = baseColor
         senderStyle.font = .bitchatSystem(size: 14, weight: isSelf ? .bold : .medium, design: .monospaced)
         if let spid = message.senderPeerID,
-           let url = URL(string: "bitchat://user/\(spid.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? spid.id)") {
+           let url = URL(string: "\(MinatoBrand.urlScheme)://user/\(spid.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? spid.id)") {
             senderStyle.link = url
         }
 
@@ -2686,7 +2686,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
 
     @MainActor
     func peerURL(for peerID: PeerID) -> URL? {
-        return URL(string: "bitchat://user/\(peerID.toPercentEncoded())")
+        return URL(string: "\(MinatoBrand.urlScheme)://user/\(peerID.toPercentEncoded())")
     }
 
     // Public helpers for views to color peers consistently in lists
