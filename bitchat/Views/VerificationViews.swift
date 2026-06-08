@@ -11,7 +11,8 @@ import AppKit
 struct MyQRView: View {
     let qrString: String
     @Environment(\.colorScheme) var colorScheme
-    private var boxColor: Color { MinatoTheme.surface(colorScheme) }
+    @Environment(\.minatoAlert) var isHighAlert
+    private var boxColor: Color { MinatoTheme.surface(colorScheme, alert: isHighAlert) }
 
     private enum Strings {
         static let title: LocalizedStringKey = "verification.my_qr.title"
@@ -286,10 +287,11 @@ struct VerificationSheetView: View {
     @Binding var isPresented: Bool
     @State private var showingScanner = false
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.minatoAlert) var isHighAlert
 
-    private var backgroundColor: Color { MinatoTheme.background(colorScheme) }
-    private var accentColor: Color { MinatoTheme.ink(colorScheme) }
-    private var boxColor: Color { MinatoTheme.surface(colorScheme) }
+    private var backgroundColor: Color { MinatoTheme.background(colorScheme, alert: isHighAlert) }
+    private var accentColor: Color { MinatoTheme.ink(colorScheme, alert: isHighAlert) }
+    private var boxColor: Color { MinatoTheme.surface(colorScheme, alert: isHighAlert) }
 
     private func myQRString() -> String {
         let npub = try? viewModel.idBridge.getCurrentNostrIdentity()?.npub

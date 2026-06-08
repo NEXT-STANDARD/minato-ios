@@ -275,19 +275,23 @@ struct DisasterModeView: View {
         return formatter.string(from: date)
     }
 
+    /// The dashboard shares the main screen's high-alert palette while disaster
+    /// mode is active.
+    private var isHighAlert: Bool { store.isActive }
+
     private var backgroundColor: Color {
-        MinatoTheme.background(colorScheme)
+        MinatoTheme.background(colorScheme, alert: isHighAlert)
     }
 
     private var textColor: Color {
-        MinatoTheme.ink(colorScheme)
+        MinatoTheme.ink(colorScheme, alert: isHighAlert)
     }
 
     private var secondaryTextColor: Color {
-        MinatoTheme.inkSecondary(colorScheme)
+        MinatoTheme.inkSecondary(colorScheme, alert: isHighAlert)
     }
 
     private var panelBackground: Color {
-        MinatoTheme.surface(colorScheme)
+        MinatoTheme.surface(colorScheme, alert: isHighAlert)
     }
 }

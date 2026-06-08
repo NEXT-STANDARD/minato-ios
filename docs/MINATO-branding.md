@@ -53,6 +53,22 @@ merge, re-check / re-apply:
   `warn`; error/destructive/needsHelp/recording-active → `danger`; unread/
   attention → `beacon`. Trust-mode badge is a distinct autonomy ramp:
   `plan→safe`, `suggest→accent`, `auto→beacon`, `fullAuto→danger`.
+- **A3 — disaster high-alert mode (done)** — when disaster mode is active the
+  whole UI flips to the high-alert (red/amber) palette:
+  - `MinatoTheme.{background,surface,ink,inkSecondary}(scheme, alert:)` gained an
+    `alert: Bool = false` flag; `alert: true` returns the high-alert variant
+    (warm high-contrast ink ≥ WCAG AAA on the red wash). `MinatoTheme.tint(alert:)`
+    resolves teal → danger.
+  - `\.minatoAlert` SwiftUI environment + `.minatoHighAlert(_:)` modifier
+    (`MinatoTheme+Alert.swift`): the modifier publishes the flag AND draws a
+    persistent danger frame. It is applied **outermost** on `ContentView` (after
+    every `.sheet`/`.fullScreenCover`) so the flag propagates into presented
+    sheets.
+  - `ContentView` drives it from `SafetyModeStore.shared.isActive`; presented
+    sheets (AppInfoView, FingerprintView, LocationChannelsSheet, LocationNotesView,
+    VerificationViews, MINATOOnboardingSheet) read `@Environment(\.minatoAlert)`
+    so they flip too; `DisasterModeView` reads `store.isActive` directly.
+  - VoiceOver: an `.announcement` fires on activation (iOS).
 
 ### Intentionally NOT migrated (categorical, not the inherited theme)
 
@@ -78,5 +94,3 @@ purpose (a future "categorical tokens" pass could add `MinatoTheme.nostr` /
   MINATO-specific strings to keep upstream-merge diffs small.
 - **Categorical color tokens** — add `MinatoTheme.nostr` / `selfMark` so the
   purple (Nostr) and orange (self) indicators above can be themed too.
-- **Disaster high-alert mode** — when disaster mode is active, shift the whole UI
-  to `MinatoTheme.alertBackground` / `alertAccent`.
