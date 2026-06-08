@@ -26,8 +26,15 @@ struct EmergencyOverride: Codable, Equatable {
     }
 
     /// Whether the override currently grants the given capability.
+    ///
+    /// Scope enforcement (defense in depth): an emergency override may only ever
+    /// grant `safety.*` capabilities — never `trust.*` / `schedule.*` /
+    /// `message.*`. This invariant is enforced here at the check point, not just
+    /// at grant time, so a tampered or mis-stored capability list can never
+    /// escalate privileges.
     func grants(_ capability: String, now: UInt64) -> Bool {
-        isActive(now: now) && capabilities.contains(capability)
+        guard capability.hasPrefix("safety.") else { return false }
+        return isActive(now: now) && capabilities.contains(capability)
     }
 }
 

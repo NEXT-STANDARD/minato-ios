@@ -34,15 +34,33 @@ struct EmergencyOverrideTests {
         #expect(expired.grants(precise, now: 1000) == false)            // expired
     }
 
+    @Test("grants enforces safety.* scope even if a non-safety capability is stored")
+    func grantsScopeEnforced() {
+        // Defense in depth: a non-safety capability must never be granted,
+        // even if it somehow ended up in the stored list.
+        let tampered = override(expiresAt: 2000, caps: ["schedule.write", "message.initiate"])
+        #expect(!tampered.grants("schedule.write", now: 1000))
+        #expect(!tampered.grants("message.initiate", now: 1000))
+    }
+
     // MARK: - Duration
 
     @Test("duration maps to seconds and expiry")
     func duration() {
-        #expect(EmergencyOverrideDuration.sixHours.seconds == 6 * 3600)
-        #expect(EmergencyOverrideDuration.twentyFourHours.seconds == 24 * 3600)
-        #expect(EmergencyOverrideDuration.manual.seconds == nil)
-        #expect(EmergencyOverrideDuration.sixHours.expiry(from: 1000) == 1000 + 6 * 3600)
-        #expect(EmergencyOverrideDuration.manual.expiry(from: 1000) == nil)
+        // Precompute Optional comparisons outside #expect — comparing Optional
+        // operands directly inside the #expect macro crashes SILGen on the CI
+        // toolchain (Swift 6.1). The Bool result is safe to pass to #expect.
+        let sixHoursSecondsOK = EmergencyOverrideDuration.sixHours.seconds == 6 * 3600
+        let daySecondsOK = EmergencyOverrideDuration.twentyFourHours.seconds == 24 * 3600
+        let manualSecondsNil = EmergencyOverrideDuration.manual.seconds == nil
+        let sixHoursExpiryOK = EmergencyOverrideDuration.sixHours.expiry(from: 1000) == 1000 + 6 * 3600
+        let manualExpiryNil = EmergencyOverrideDuration.manual.expiry(from: 1000) == nil
+
+        #expect(sixHoursSecondsOK)
+        #expect(daySecondsOK)
+        #expect(manualSecondsNil)
+        #expect(sixHoursExpiryOK)
+        #expect(manualExpiryNil)
         #expect(EmergencyOverrideDuration.default == .sixHours)
     }
 
@@ -69,7 +87,8 @@ struct EmergencyOverrideTests {
     func legacyDecodes() throws {
         let legacy = #"{"mode":"plan","custom_permissions":{},"established_at":1,"last_interaction":1}"#
         let decoded = try JSONDecoder().decode(TrustSettings.self, from: Data(legacy.utf8))
-        #expect(decoded.emergencyOverride == nil)
+        let overrideIsNil = decoded.emergencyOverride == nil   // precompute (see duration())
+        #expect(overrideIsNil)
         #expect(decoded.mode == .plan)
     }
 
