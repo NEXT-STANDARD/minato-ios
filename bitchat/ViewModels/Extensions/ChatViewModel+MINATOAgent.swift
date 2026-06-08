@@ -53,6 +53,13 @@ extension ChatViewModel {
         }
     }
 
+    // MARK: - Disaster Mode (E-3a)
+
+    /// Broadcasts the given safety check-in to the mesh, if BLE is available.
+    func broadcastSafetyCheckin(_ checkin: SafetyCheckin) {
+        (meshService as? BLEService)?.sendSafetyCheckin(checkin)
+    }
+
     // MARK: - MINATO Agent Message Delegate
 
     func didReceiveAgentMessage(from peerID: PeerID, content: String, translatedContent: String?, intent: String?, timestamp: Date) {

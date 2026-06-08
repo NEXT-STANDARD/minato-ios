@@ -30,6 +30,19 @@ extension MINATOPayload {
     /// Context key under which the encoded `SafetyCheckin` is carried.
     static let safetyCheckinContextKey = "safety_checkin"
 
+    /// Mesh TTL used when broadcasting a safety check-in. Higher than the
+    /// default agent-message TTL so check-ins reach further across the mesh
+    /// during a disaster.
+    static let safetyTTL: UInt8 = 5
+
+    /// Best-effort delivery metadata derived from a received packet's TTL.
+    /// `hops` = `safetyTTL - packetTTL` (0 when received directly). Approximate:
+    /// assumes the sender used `safetyTTL`.
+    static func deliveryMetadata(forPacketTTL packetTTL: UInt8) -> (delivery: SafetyRelayDelivery, hops: Int) {
+        let hops = max(0, Int(safetyTTL) - Int(packetTTL))
+        return (hops == 0 ? .direct : .mesh, hops)
+    }
+
     /// Build an unsigned `AGENT_MESSAGE` envelope carrying a safety check-in.
     /// Sign it via `signaturePayloadData()` + `withSignature(_:)` before sending.
     static func safetyCheckin(
@@ -78,5 +91,28 @@ extension MINATOPayload {
             return nil
         }
         return try SafetyCheckin(contextValue: value)
+    }
+
+    /// Pure TOFU verification for a safety check-in that carries its own Agent
+    /// Card. Verifies the card self-signature, that the envelope `from` matches
+    /// the card identity, and the envelope signature against the card's key.
+    ///
+    /// - Parameter cachedKey: the Ed25519 key already cached for the sender, or
+    ///   `nil` on first contact. A mismatch is rejected (no identity swap).
+    /// - Returns: the verified Agent Card (to cache on first contact), or `nil`
+    ///   if verification fails. The caller performs the cache side-effect.
+    func verifiedSafetyCard(cachedKey: String?) -> AgentCard? {
+        guard isSafetyCheckin,
+              let card = payload.agentCard,
+              let cardKey = card.ed25519PubKey,
+              MINATOSigning.verify(card),
+              from == card.agentId,
+              MINATOSigning.verify(self, senderEd25519Hex: cardKey) else {
+            return nil
+        }
+        if let cachedKey, cachedKey != cardKey {
+            return nil
+        }
+        return card
     }
 }
