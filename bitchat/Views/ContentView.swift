@@ -1157,6 +1157,7 @@ struct ContentView: View {
         ) {
             Button("起動する", role: .destructive) {
                 safetyStore.activate()
+                viewModel.broadcastSafetyCheckin(safetyStore.checkin)
                 showSafetyDashboard = true
             }
             Button("キャンセル", role: .cancel) { }
@@ -1165,11 +1166,19 @@ struct ContentView: View {
         }
 #if os(iOS)
         .fullScreenCover(isPresented: $showSafetyDashboard) {
-            DisasterModeView(store: safetyStore, onDismiss: { showSafetyDashboard = false })
+            DisasterModeView(
+                store: safetyStore,
+                onDismiss: { showSafetyDashboard = false },
+                onBroadcast: { viewModel.broadcastSafetyCheckin($0) }
+            )
         }
 #else
         .sheet(isPresented: $showSafetyDashboard) {
-            DisasterModeView(store: safetyStore, onDismiss: { showSafetyDashboard = false })
+            DisasterModeView(
+                store: safetyStore,
+                onDismiss: { showSafetyDashboard = false },
+                onBroadcast: { viewModel.broadcastSafetyCheckin($0) }
+            )
         }
 #endif
         .sheet(isPresented: $showOnboardingSheet) {

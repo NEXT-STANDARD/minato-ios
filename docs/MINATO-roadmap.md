@@ -160,11 +160,23 @@
 - [x] `docs/MINATO-message-shapes.md` に safety section（intent/capability/shape）追記
 - [x] `SafetyCheckinEnvelopeTests` 追加（round-trip / intent / 署名正規形 / highRisk）
 
-### Track E-3: BLE mesh relay
-- Disaster Mode safety check-ins を BLE mesh 送信
-- TTL / expiry / dedupe 実装
-- low battery / low power mode で送信頻度を抑制
-- direct vs relayed metadata を UI に表示
+### Track E-3a: BLE mesh send + TOFU reception
+**ステータス**: 完了（2026-06-08）
+
+> 設計判断: 受信は **自己署名 TOFU**（safety.checkin に AgentCard を同梱、初回に自己署名検証→キャッシュ）。未ハンドシェイクの近隣他者からも改ざん検出付きで受信可。送信は **ステータス変更/起動時に1回ブロードキャスト**（周期ループは E-3b）。mesh リレー/TTL 転送は既存 Bitchat トランスポートが担当。
+
+- [x] `sendSafetyCheckin(_:)` — AgentCard 同梱でブロードキャスト（`recipientID` nil, `ttl=safetyTTL`）
+- [x] TOFU 受信検証（`verifiedSafetyCard(cachedKey:)` 純関数 + `handleMINATOPacket` 分岐 + 鍵衝突拒否）
+- [x] `SafetyCheckinStore` — `id` dedupe / `expires_at` 破棄 / cap、`deliveredVia`/`hops` 付与
+- [x] `handleAgentMessage` で safety.checkin を受信ストアへ（chat/AI返信から分離）
+- [x] direct vs relayed メタデータを packet TTL から算出し DisasterModeView に表示
+- [x] DisasterModeView の status 変更/起動で送信トリガ配線（ContentView → ChatViewModel → BLEService）
+- [x] テスト: store dedupe/expiry/cap、TOFU 検証、delivery メタデータ
+
+### Track E-3b: 周期再送 + 電池スロットリング（保留）
+- 起動中の定期再ブロードキャスト
+- low battery / low power mode で送信頻度を抑制（送信間隔判定は純関数でテスト）
+- 実機必須（Simulator 検証不可）のため分離
 
 ---
 

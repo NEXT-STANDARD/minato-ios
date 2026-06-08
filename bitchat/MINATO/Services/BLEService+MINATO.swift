@@ -15,15 +15,33 @@ extension BLEService {
         // Non-handshake packets must have a verified envelope signature.
         // Handshake verification happens inside handleAgentHandshake (AgentCard self-sig).
         if messageType != .agentHandshake && messageType != .agentPing {
-            guard let payload = decodeMINATOPayload(packet.payload),
-                  let remoteCard = MINATOAgentStore.shared.remoteCard(for: senderID),
-                  let ed25519PubKeyHex = remoteCard.ed25519PubKey else {
-                SecureLogger.warning("MINATO \(messageType.description): no verified Ed25519 key for \(senderID.id.prefix(8)), dropping", category: .security)
+            guard let payload = decodeMINATOPayload(packet.payload) else {
+                SecureLogger.warning("MINATO \(messageType.description): undecodable payload from \(senderID.id.prefix(8)), dropping", category: .security)
                 return
             }
-            guard MINATOSigning.verify(payload, senderEd25519Hex: ed25519PubKeyHex) else {
-                SecureLogger.warning("MINATO \(messageType.description): invalid envelope signature from \(senderID.id.prefix(8)), dropping", category: .security)
-                return
+
+            // TOFU path: a safety check-in carries its own Agent Card so peers we
+            // have not handshaken with can still be verified on first contact.
+            if messageType == .agentMessage, payload.isSafetyCheckin, payload.payload.agentCard != nil {
+                let cachedKey = MINATOAgentStore.shared.remoteCard(for: senderID)?.ed25519PubKey
+                guard let verifiedCard = payload.verifiedSafetyCard(cachedKey: cachedKey) else {
+                    SecureLogger.warning("safety.checkin: TOFU verification failed from \(senderID.id.prefix(8)), dropping", category: .security)
+                    return
+                }
+                if cachedKey == nil {
+                    MINATOAgentStore.shared.saveRemoteCard(verifiedCard, for: senderID)
+                    SecureLogger.info("safety.checkin: TOFU-cached Agent Card for \(senderID.id.prefix(8))", category: .security)
+                }
+            } else {
+                guard let remoteCard = MINATOAgentStore.shared.remoteCard(for: senderID),
+                      let ed25519PubKeyHex = remoteCard.ed25519PubKey else {
+                    SecureLogger.warning("MINATO \(messageType.description): no verified Ed25519 key for \(senderID.id.prefix(8)), dropping", category: .security)
+                    return
+                }
+                guard MINATOSigning.verify(payload, senderEd25519Hex: ed25519PubKeyHex) else {
+                    SecureLogger.warning("MINATO \(messageType.description): invalid envelope signature from \(senderID.id.prefix(8)), dropping", category: .security)
+                    return
+                }
             }
         }
 
@@ -103,6 +121,13 @@ extension BLEService {
     private func handleAgentMessage(_ packet: BitchatPacket, from senderID: PeerID) {
         guard let payload = decodeMINATOPayload(packet.payload) else { return }
 
+        // Safety check-ins ride on AGENT_MESSAGE but are stored for disaster mode
+        // rather than shown in chat or auto-replied to.
+        if payload.isSafetyCheckin {
+            recordSafetyCheckin(payload, packet: packet)
+            return
+        }
+
         let content = payload.payload.translatedContent ?? payload.payload.content ?? ""
         let intent = payload.payload.intent
         let originalContent = payload.payload.content
@@ -134,6 +159,23 @@ extension BLEService {
         if !isAutoReply {
             sendAIAgentReply(to: senderID, originalContent: originalContent ?? content, intent: intent)
         }
+    }
+
+    /// Stores an incoming safety check-in (deduped/expired-pruned by the store),
+    /// tagging it with best-effort direct/relayed delivery metadata.
+    private func recordSafetyCheckin(_ payload: MINATOPayload, packet: BitchatPacket) {
+        guard let checkin = try? payload.decodedSafetyCheckin() else { return }
+        let meta = MINATOPayload.deliveryMetadata(forPacketTTL: packet.ttl)
+        let receivedAt = UInt64(Date().timeIntervalSince1970)
+        DispatchQueue.main.async {
+            SafetyCheckinStore.shared.record(
+                checkin,
+                deliveredVia: meta.delivery,
+                hops: meta.hops,
+                receivedAt: receivedAt
+            )
+        }
+        SecureLogger.info("Received safety.checkin id=\(checkin.id.prefix(8)) status=\(checkin.status.rawValue) via \(meta.delivery.rawValue) hops=\(meta.hops)", category: .session)
     }
 
     // MARK: - AI Agent Reply
@@ -350,6 +392,41 @@ extension BLEService {
 
         sendMINATOPacket(encoded, directedTo: peerID)
         SecureLogger.info("Sent AGENT_MESSAGE to \(peerID.id.prefix(8))", category: .session)
+    }
+
+    // MARK: - Send Safety Check-in (E-3a)
+
+    /// Broadcasts a disaster-mode safety check-in to the mesh (no specific
+    /// recipient). The local Agent Card is embedded so receivers that have not
+    /// handshaken with us can verify the self-signature on first contact (TOFU).
+    /// Rides on AGENT_MESSAGE with `intent=safety.checkin`; see SafetyPayload+MINATO.
+    func sendSafetyCheckin(_ checkin: SafetyCheckin) {
+        guard let localCard = MINATOAgentStore.shared.localCard else {
+            SecureLogger.warning("Cannot broadcast safety.checkin: no local Agent Card", category: .session)
+            return
+        }
+        guard let contextValue = try? checkin.asContextValue() else {
+            SecureLogger.warning("Cannot encode safety.checkin context", category: .session)
+            return
+        }
+        let payloadContent = PayloadContent(
+            intent: Intent.safetyCheckin.rawValue,
+            content: checkin.content,
+            originalLanguage: localCard.ownerLocale,
+            translatedContent: nil,
+            status: nil, requestId: nil, action: nil,
+            context: [MINATOPayload.safetyCheckinContextKey: contextValue],
+            proposedEvent: nil,
+            agentCard: localCard
+        )
+        guard let encoded = encodeMINATOPacket(
+            type: .agentMessage,
+            payload: payloadContent,
+            to: nil,
+            ttl: MINATOPayload.safetyTTL
+        ) else { return }
+        sendMINATOPacket(encoded, directedTo: nil)
+        SecureLogger.info("Broadcast safety.checkin id=\(checkin.id.prefix(8)) status=\(checkin.status.rawValue)", category: .session)
     }
 
     // MARK: - Nostr Dummy Reply
@@ -690,7 +767,7 @@ extension BLEService {
 
     // MARK: - Encode Helper
 
-    func encodeMINATOPacket(type: MINATOMessageType, payload: PayloadContent, to peerID: PeerID?) -> Data? {
+    func encodeMINATOPacket(type: MINATOMessageType, payload: PayloadContent, to peerID: PeerID?, ttl: UInt8 = 3) -> Data? {
         guard let localCard = MINATOAgentStore.shared.localCard else { return nil }
 
         // Resolve recipient npub from remote card (protocol spec §10 requires non-empty `to`)
@@ -723,7 +800,7 @@ extension BLEService {
             timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
             payload: jsonData,
             signature: nil,
-            ttl: 3
+            ttl: ttl
         )
 
         return BinaryProtocol.encode(packet)

@@ -8,7 +8,11 @@ import SwiftUI
 /// land in Phase 2 (E-2/E-3).
 struct DisasterModeView: View {
     @ObservedObject var store: SafetyModeStore
+    @ObservedObject private var inbox = SafetyCheckinStore.shared
     let onDismiss: () -> Void
+    /// Called with the current check-in whenever the owner changes status, so the
+    /// caller can broadcast it to the mesh.
+    var onBroadcast: (SafetyCheckin) -> Void = { _ in }
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -101,16 +105,60 @@ struct DisasterModeView: View {
 
     private var nearbyInformation: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("初期実装")
+            Text("周辺の安否")
                 .font(.bitchatSystem(size: 14, weight: .semibold, design: .monospaced))
-            Text("この画面はローカルの安否カードとバッテリー snapshot を表示します。次の段階で MINATO payload 化、BLE mesh 送信、relay metadata を接続します。")
-                .font(.bitchatSystem(size: 12, design: .monospaced))
-                .foregroundColor(secondaryTextColor)
-                .fixedSize(horizontal: false, vertical: true)
+
+            let items = inbox.activeCheckins()
+            if items.isEmpty {
+                Text("まだ周辺の安否情報は受信していません。")
+                    .font(.bitchatSystem(size: 12, design: .monospaced))
+                    .foregroundColor(secondaryTextColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ForEach(items) { item in
+                    receivedRow(item)
+                }
+            }
         }
         .padding(12)
         .background(panelBackground)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func receivedRow(_ item: SafetyCheckinStore.Received) -> some View {
+        let entry = item.checkin
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Image(systemName: entry.status == .needsHelp ? "exclamationmark.triangle.fill" : "person.fill")
+                    .foregroundColor(entry.status == .needsHelp ? .red : .green)
+                    .font(.system(size: 12))
+                Text(entry.status.displayNameJA)
+                    .font(.bitchatSystem(size: 13, weight: .semibold, design: .monospaced))
+                Spacer()
+                Text(deliveryLabel(item))
+                    .font(.bitchatSystem(size: 11, design: .monospaced))
+                    .foregroundColor(secondaryTextColor)
+            }
+            Text(entry.content)
+                .font(.bitchatSystem(size: 11, design: .monospaced))
+                .foregroundColor(secondaryTextColor)
+                .fixedSize(horizontal: false, vertical: true)
+            if !entry.needs.isEmpty {
+                Text("必要: \(entry.needs.map(\.displayNameJA).joined(separator: " / "))")
+                    .font(.bitchatSystem(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.red)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func deliveryLabel(_ item: SafetyCheckinStore.Received) -> String {
+        switch item.deliveredVia {
+        case .direct: return "直接"
+        case .mesh: return "メッシュ \(item.hops) hops"
+        case .nostr: return "Nostr 経由"
+        case .unknown: return "不明"
+        }
     }
 
     private var policyNote: some View {
@@ -127,6 +175,7 @@ struct DisasterModeView: View {
     private func actionButton(status: SafetyStatus, icon: String) -> some View {
         Button {
             store.setStatus(status)
+            onBroadcast(store.checkin)
         } label: {
             Label(status.displayNameJA, systemImage: icon)
                 .frame(maxWidth: .infinity, minHeight: 46)

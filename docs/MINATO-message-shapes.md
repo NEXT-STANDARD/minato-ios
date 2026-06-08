@@ -465,7 +465,14 @@ Check-in object (`safety_checkin`):
 
 Canonical example: `docs/examples/minato-ios/safety_checkin.json`.
 
-Status (E-2): models + envelope encode/decode + golden example. BLE mesh send, TTL/dedupe, and battery-aware throttling are E-3.
+#### Broadcast & reception (E-3a)
+
+- **Broadcast**: sent to the mesh with no specific recipient (`to` empty, `recipientID` nil) at TTL `5` (`MINATOPayload.safetyTTL`, higher than the default `3` for reach). Mesh relay/forwarding is handled by the existing Bitchat transport.
+- **Embedded Agent Card (TOFU)**: a broadcast additionally carries the sender's signed Agent Card in `payload.agent_card`. Receivers that have not handshaken with the sender verify the card self-signature, check that the envelope `from` matches `agent_card.agent_id`, verify the envelope signature against `agent_card.ed25519_pub_key`, and cache the card on first contact (trust-on-first-use). A later check-in whose embedded key differs from the cached key is rejected (no identity swap). The golden example omits `agent_card` to show the minimal context shape.
+- **Dedupe / expiry**: receivers store check-ins keyed by `id`, replacing on repeat and dropping entries past `expires_at`.
+- **Direct vs relayed**: receivers derive best-effort delivery metadata from the packet TTL (`hops = safetyTTL − packet.ttl`; `direct` when `hops == 0`) for display. This is receive-side metadata, separate from the signed `relay` object.
+
+Status: E-2 = models + envelope encode/decode + golden example. E-3a = broadcast send + TOFU reception + dedupe/expiry + direct/relayed display. E-3b (pending) = periodic re-broadcast with battery-aware throttling.
 
 ---
 
