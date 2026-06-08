@@ -10,6 +10,9 @@ jobs:
   test:
     name: Run Swift Tests
     runs-on: macos-latest
+    # Defensive caps. Past runs without these stayed `in_progress` for
+    # 1-2 hours when a test under `--parallel` hung, tying up the runner.
+    timeout-minutes: 25
 
     steps:
       - name: Checkout code
@@ -28,7 +31,9 @@ jobs:
             ${{ runner.os }}-build-
 
       - name: Build the package
+        timeout-minutes: 10
         run: swift build
 
       - name: Run Tests
+        timeout-minutes: 12
         run: swift test --parallel
