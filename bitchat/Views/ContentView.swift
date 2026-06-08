@@ -78,7 +78,13 @@ struct ContentView: View {
     // Window sizes for rendering (infinite scroll up)
     @State private var windowCountPublic: Int = 300
     @State private var windowCountPrivate: [PeerID: Int] = [:]
-    
+
+    // Disaster mode (D-3): observe the shared store, gate activation behind
+    // a confirmation prompt, present the dashboard via fullScreenCover.
+    @ObservedObject private var disasterStore = DisasterModeStore.shared
+    @State private var showDisasterActivateConfirm = false
+    @State private var showDisasterDashboard = false
+
     // MARK: - Computed Properties
     
     private var backgroundColor: Color {
@@ -131,6 +137,12 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            SafetyHeaderView(
+                store: disasterStore,
+                onRequestActivate: { showDisasterActivateConfirm = true },
+                onOpenDashboard: { showDisasterDashboard = true }
+            )
+
             mainHeaderView
                 .onAppear {
                     viewModel.currentColorScheme = colorScheme
@@ -275,6 +287,34 @@ struct ContentView: View {
         } message: {
             Text(viewModel.bluetoothAlertMessage)
         }
+        .confirmationDialog(
+            "災害モードを起動しますか？",
+            isPresented: $showDisasterActivateConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("起動する", role: .destructive) {
+                disasterStore.activate()
+                showDisasterDashboard = true
+            }
+            Button("キャンセル", role: .cancel) { }
+        } message: {
+            Text("ON 中は安否情報を周辺に発信します。")
+        }
+        #if os(iOS)
+        .fullScreenCover(isPresented: $showDisasterDashboard) {
+            DisasterModeView(
+                store: disasterStore,
+                onDismiss: { showDisasterDashboard = false }
+            )
+        }
+        #else
+        .sheet(isPresented: $showDisasterDashboard) {
+            DisasterModeView(
+                store: disasterStore,
+                onDismiss: { showDisasterDashboard = false }
+            )
+        }
+        #endif
         .onDisappear {
             autocompleteDebounceTimer?.invalidate()
         }
