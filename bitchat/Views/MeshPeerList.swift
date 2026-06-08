@@ -93,7 +93,7 @@ struct MeshPeerList: View {
                         if !isMe, viewModel.isPeerBlocked(peer.peerID) {
                             Image(systemName: "nosign")
                                 .font(.bitchatSystem(size: 10))
-                                .foregroundColor(.red)
+                                .foregroundColor(MinatoTheme.danger)
                                 .help(Strings.blockedTooltip)
                         }
 
@@ -127,13 +127,13 @@ struct MeshPeerList: View {
                             HStack(spacing: 2) {
                                 Image(systemName: "person.badge.shield.checkmark.fill")
                                     .font(.bitchatSystem(size: 9))
-                                    .foregroundColor(.cyan)
+                                    .foregroundColor(MinatoTheme.accent)
                                 Text(card.ownerLocale.uppercased())
                                     .font(.bitchatSystem(size: 9, design: .monospaced))
-                                    .foregroundColor(.cyan)
+                                    .foregroundColor(MinatoTheme.accent)
                                 Text(currentMode.displayName)
                                     .font(.bitchatSystem(size: 9, design: .monospaced))
-                                    .foregroundColor(.cyan.opacity(0.7))
+                                    .foregroundColor(MinatoTheme.accent.opacity(0.7))
                             }
                         }
 
@@ -143,7 +143,7 @@ struct MeshPeerList: View {
                         if !isMe, item.hasUnread {
                             Image(systemName: "envelope.fill")
                                 .font(.bitchatSystem(size: 10))
-                                .foregroundColor(.orange)
+                                .foregroundColor(MinatoTheme.beacon)
                                 .help(Strings.newMessagesTooltip)
                         }
 

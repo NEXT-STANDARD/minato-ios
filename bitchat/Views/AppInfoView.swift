@@ -5,15 +5,15 @@ struct AppInfoView: View {
     @Environment(\.colorScheme) var colorScheme
     
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color.black : Color.white
+        MinatoTheme.background(colorScheme)
     }
-    
+
     private var textColor: Color {
-        colorScheme == .dark ? Color.green : Color(red: 0, green: 0.5, blue: 0)
+        MinatoTheme.ink(colorScheme)
     }
-    
+
     private var secondaryTextColor: Color {
-        colorScheme == .dark ? Color.green.opacity(0.8) : Color(red: 0, green: 0.5, blue: 0).opacity(0.8)
+        MinatoTheme.inkSecondary(colorScheme)
     }
     
     // MARK: - Constants
@@ -204,9 +204,9 @@ struct SectionHeader: View {
     @Environment(\.colorScheme) var colorScheme
     
     private var textColor: Color {
-        colorScheme == .dark ? Color.green : Color(red: 0, green: 0.5, blue: 0)
+        MinatoTheme.ink(colorScheme)
     }
-    
+
     init(_ title: LocalizedStringKey) {
         self.title = title
     }
@@ -224,13 +224,13 @@ struct FeatureRow: View {
     @Environment(\.colorScheme) var colorScheme
     
     private var textColor: Color {
-        colorScheme == .dark ? Color.green : Color(red: 0, green: 0.5, blue: 0)
+        MinatoTheme.ink(colorScheme)
     }
-    
+
     private var secondaryTextColor: Color {
-        colorScheme == .dark ? Color.green.opacity(0.8) : Color(red: 0, green: 0.5, blue: 0).opacity(0.8)
+        MinatoTheme.inkSecondary(colorScheme)
     }
-    
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: info.icon)

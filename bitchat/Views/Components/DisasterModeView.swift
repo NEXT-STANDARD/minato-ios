@@ -71,7 +71,7 @@ struct DisasterModeView: View {
                 Spacer()
                 Image(systemName: checkin.status == .needsHelp ? "exclamationmark.triangle.fill" : "checkmark.shield.fill")
                     .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(checkin.status == .needsHelp ? .red : .green)
+                    .foregroundColor(checkin.status == .needsHelp ? MinatoTheme.danger : MinatoTheme.safe)
             }
 
             Divider()
@@ -84,11 +84,11 @@ struct DisasterModeView: View {
             if !checkin.needs.isEmpty {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "cross.case.fill")
-                        .foregroundColor(.red)
+                        .foregroundColor(MinatoTheme.danger)
                         .frame(width: 20)
                     Text("必要: \(checkin.needs.map(\.displayNameJA).joined(separator: " / "))")
                         .font(.bitchatSystem(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.red)
+                        .foregroundColor(MinatoTheme.danger)
                 }
             }
         }
@@ -142,7 +142,7 @@ struct DisasterModeView: View {
         return VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
                 Image(systemName: entry.status == .needsHelp ? "exclamationmark.triangle.fill" : "person.fill")
-                    .foregroundColor(entry.status == .needsHelp ? .red : .green)
+                    .foregroundColor(entry.status == .needsHelp ? MinatoTheme.danger : MinatoTheme.safe)
                     .font(.system(size: 12))
                 Text(entry.status.displayNameJA)
                     .font(.bitchatSystem(size: 13, weight: .semibold, design: .monospaced))
@@ -158,7 +158,7 @@ struct DisasterModeView: View {
             if !entry.needs.isEmpty {
                 Text("必要: \(entry.needs.map(\.displayNameJA).joined(separator: " / "))")
                     .font(.bitchatSystem(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.red)
+                    .foregroundColor(MinatoTheme.danger)
             }
         }
         .padding(.vertical, 4)
@@ -202,7 +202,7 @@ struct DisasterModeView: View {
                 .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.bordered)
-        .tint(.red)
+        .tint(MinatoTheme.danger)
     }
 
     private func actionButton(status: SafetyStatus, icon: String) -> some View {
@@ -214,7 +214,7 @@ struct DisasterModeView: View {
                 .frame(maxWidth: .infinity, minHeight: 46)
         }
         .buttonStyle(.borderedProminent)
-        .tint(status == .needsHelp ? .red : .green)
+        .tint(status == .needsHelp ? MinatoTheme.danger : MinatoTheme.safe)
     }
 
     private func infoRow(icon: String, label: String, value: String) -> some View {

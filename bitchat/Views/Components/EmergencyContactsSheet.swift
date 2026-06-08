@@ -70,17 +70,17 @@ struct EmergencyContactsSheet: View {
                     .font(.bitchatSystem(size: 14, weight: .semibold, design: .monospaced))
                 Text(statusText(contact.override))
                     .font(.bitchatSystem(size: 11, design: .monospaced))
-                    .foregroundColor(active ? .red : .secondary)
+                    .foregroundColor(active ? MinatoTheme.danger : .secondary)
             }
             Spacer()
             if active {
                 Button("解除") { viewModel.revokeEmergencyOverride(npub: contact.npub) }
                     .buttonStyle(.bordered)
-                    .tint(.red)
+                    .tint(MinatoTheme.danger)
             } else {
                 Button("付与") { pendingGrantNpub = contact.npub }
                     .buttonStyle(.borderedProminent)
-                    .tint(.orange)
+                    .tint(MinatoTheme.warn)
             }
         }
     }

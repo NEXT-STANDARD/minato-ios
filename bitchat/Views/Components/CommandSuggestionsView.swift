@@ -10,7 +10,8 @@ import SwiftUI
 struct CommandSuggestionsView: View {
     @EnvironmentObject private var viewModel: ChatViewModel
     @ObservedObject private var locationManager = LocationChannelManager.shared
-    
+    @Environment(\.colorScheme) private var colorScheme
+
     @Binding var messageText: String
     
     let textColor: Color
@@ -35,7 +36,7 @@ struct CommandSuggestionsView: View {
                     buttonRow(for: command)
                 }
                 .buttonStyle(.plain)
-                .background(Color.gray.opacity(0.1))
+                .background(MinatoTheme.surface(colorScheme))
             }
         }
         .background(backgroundColor)

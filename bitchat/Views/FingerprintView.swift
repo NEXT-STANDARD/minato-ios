@@ -15,11 +15,11 @@ struct FingerprintView: View {
     @Environment(\.colorScheme) var colorScheme
     
     private var textColor: Color {
-        colorScheme == .dark ? Color.green : Color(red: 0, green: 0.5, blue: 0)
+        MinatoTheme.ink(colorScheme)
     }
-    
+
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color.black : Color.white
+        MinatoTheme.background(colorScheme)
     }
 
     private enum Strings {
@@ -87,7 +87,7 @@ struct FingerprintView: View {
                     if let icon = encryptionStatus.icon {
                         Image(systemName: icon)
                             .font(.bitchatSystem(size: 20))
-                            .foregroundColor(encryptionStatus == .noiseVerified ? Color.green : textColor)
+                            .foregroundColor(encryptionStatus == .noiseVerified ? MinatoTheme.safe : textColor)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -97,20 +97,20 @@ struct FingerprintView: View {
                         
                         Text(encryptionStatus.description)
                             .font(.bitchatSystem(size: 12, design: .monospaced))
-                            .foregroundColor(textColor.opacity(0.7))
+                            .foregroundColor(MinatoTheme.inkSecondary(colorScheme))
                     }
                     
                     Spacer()
                 }
                 .padding()
-                .background(Color.gray.opacity(0.1))
+                .background(MinatoTheme.surface(colorScheme))
                 .cornerRadius(8)
                 
                 // Their fingerprint
                 VStack(alignment: .leading, spacing: 8) {
                     Text(Strings.theirFingerprint)
                         .font(.bitchatSystem(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(textColor.opacity(0.7))
+                        .foregroundColor(MinatoTheme.inkSecondary(colorScheme))
                     
                     if let fingerprint = viewModel.getFingerprint(for: statusPeerID) {
                         Text(formatFingerprint(fingerprint))
@@ -121,7 +121,7 @@ struct FingerprintView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color.gray.opacity(0.1))
+                            .background(MinatoTheme.surface(colorScheme))
                             .cornerRadius(8)
                             .contextMenu {
                                 Button(Strings.copy) {
@@ -136,7 +136,7 @@ struct FingerprintView: View {
                     } else {
                         Text(Strings.handshakePending)
                             .font(.bitchatSystem(size: 14, design: .monospaced))
-                            .foregroundColor(Color.orange)
+                            .foregroundColor(MinatoTheme.warn)
                             .padding()
                     }
                 }
@@ -145,7 +145,7 @@ struct FingerprintView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(Strings.yourFingerprint)
                         .font(.bitchatSystem(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(textColor.opacity(0.7))
+                        .foregroundColor(MinatoTheme.inkSecondary(colorScheme))
                     
                     let myFingerprint = viewModel.getMyFingerprint()
                     Text(formatFingerprint(myFingerprint))
@@ -156,7 +156,7 @@ struct FingerprintView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.gray.opacity(0.1))
+                        .background(MinatoTheme.surface(colorScheme))
                         .cornerRadius(8)
                         .contextMenu {
                             Button(Strings.copy) {
@@ -177,7 +177,7 @@ struct FingerprintView: View {
                     VStack(spacing: 12) {
                         Text(isVerified ? Strings.verifiedBadge : Strings.notVerifiedBadge)
                             .font(.bitchatSystem(size: 14, weight: .bold, design: .monospaced))
-                            .foregroundColor(isVerified ? Color.green : Color.orange)
+                            .foregroundColor(isVerified ? MinatoTheme.safe : MinatoTheme.warn)
                             .frame(maxWidth: .infinity)
                         
                         Group {
@@ -188,7 +188,7 @@ struct FingerprintView: View {
                             }
                         }
                             .font(.bitchatSystem(size: 12, design: .monospaced))
-                            .foregroundColor(textColor.opacity(0.7))
+                            .foregroundColor(MinatoTheme.inkSecondary(colorScheme))
                             .multilineTextAlignment(.center)
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
@@ -204,7 +204,7 @@ struct FingerprintView: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 10)
-                                    .background(Color.green)
+                                    .background(MinatoTheme.safe)
                                     .cornerRadius(8)
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -218,7 +218,7 @@ struct FingerprintView: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 10)
-                                    .background(Color.red)
+                                    .background(MinatoTheme.danger)
                                     .cornerRadius(8)
                             }
                             .buttonStyle(PlainButtonStyle())

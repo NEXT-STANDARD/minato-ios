@@ -83,7 +83,7 @@ struct GeohashPeopleList: View {
                             if viewModel.isGeohashUserBlocked(pubkeyHexLowercased: person.id) {
                                 Image(systemName: "nosign")
                                     .font(.bitchatSystem(size: 10))
-                                    .foregroundColor(.red)
+                                    .foregroundColor(MinatoTheme.danger)
                                     .help(Strings.blockedTooltip)
                             }
                         }
