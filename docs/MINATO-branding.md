@@ -35,6 +35,11 @@ merge, re-check / re-apply:
 - `bitchat/Views/ContentView.swift` header → `Text(verbatim: MinatoBrand.headerTitle)` (not `"bitchat/"`)
 - `bitchat/Views/AppInfoView.swift` title → `MinatoBrand.displayName`
 - `bitchat/Services/NotificationService.swift` → notification copy uses `MinatoBrand.displayName`
+- **App icon** — the MINATO artwork overwrites upstream's icon PNGs in
+  `bitchat/Assets.xcassets/AppIcon.appiconset/` (Release + macOS sizes) and
+  `bitchat/Assets.xcassets/AppIconDebug.appiconset/image-1024.png` (Debug). If an
+  upstream merge touches these, **keep ours** (`git checkout --ours -- bitchat/Assets.xcassets/AppIcon.appiconset bitchat/Assets.xcassets/AppIconDebug.appiconset`)
+  and regenerate with `python3 tools/minato-icon/generate.py`.
 
 ## Palette adoption status
 
@@ -80,6 +85,14 @@ merge, re-check / re-apply:
   - Reclassified along the way: the **agent activity-log count badge** purple was
     *not* Nostr → mapped to `accent` (MINATO agent chrome); the onboarding **Tips**
     lightbulb `.yellow` → `beacon`.
+- **A5 — app icon "Harbor Beacon" (done)** — a beacon (灯台) glowing over a calm
+  night harbor, broadcasting concentric signal rings (mesh / offline reach), with
+  a shimmering reflection on teal water. Palette derives from MinatoTheme
+  (navy night / teal `accent` sea / amber `beacon`). Reproducible, tunable
+  generator: `python3 tools/minato-icon/generate.py` (pure Pillow, supersampled →
+  1024, opaque RGB, no alpha per App Store rules). The Debug icon
+  (`AppIconDebug`) adds a small teal corner triangle so dev builds are
+  distinguishable on the home screen.
 
 ### Intentionally NOT migrated
 
@@ -100,7 +113,5 @@ merge, re-check / re-apply:
 
 - **URL scheme** `bitchat://` → `minato://` — breaking (deep links + Nostr
   `bitchat1:` interop). Needs version negotiation; do as a deliberate step.
-- **App icon / Assets** — redesign into a separate `Assets-MINATO.xcassets` to
-  avoid upstream asset conflicts.
 - **Localizable.xcstrings** — consider a MINATO sidecar `MINATO.xcstrings` for
   MINATO-specific strings to keep upstream-merge diffs small.
