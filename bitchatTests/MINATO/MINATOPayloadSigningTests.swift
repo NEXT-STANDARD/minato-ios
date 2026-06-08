@@ -73,7 +73,11 @@ struct MINATOPayloadSigningTests {
         let signed = MINATOSigning.sign(makePayload(type: .agentMessage), using: service)
 
         let originalSig = try #require(signed.signature)
-        let tampered = signed.withSignature(String(originalSig.dropLast(2)) + "00")
+        // Flip the last byte to a guaranteed-different value: hard-coding "00"
+        // was a no-op (≈1/256 of runs) when the signature already ended in "00",
+        // making the test flaky. Mirrors AgentCardSigningTests.tamperHexSignature.
+        let replacement = originalSig.hasSuffix("00") ? "ff" : "00"
+        let tampered = signed.withSignature(String(originalSig.dropLast(2)) + replacement)
 
         #expect(!MINATOSigning.verify(tampered, senderEd25519Hex: ed25519PubKeyHex))
     }
