@@ -28,7 +28,8 @@ views. Adoption across inherited bitchat screens is incremental.
 These are NOT pure code and can be reverted by an upstream merge. After every
 merge, re-check / re-apply:
 
-- `bitchat/Info.plist` → `CFBundleDisplayName = MINATO`
+- `bitchat.xcodeproj/project.pbxproj` → `INFOPLIST_KEY_CFBundleDisplayName = MINATO` (6 build configs: iOS/macOS app + share extension × Debug/Release). **This build setting overrides the Info.plist value**, so it is the authoritative home-screen name.
+- `bitchat/Info.plist` → `CFBundleDisplayName = MINATO` (kept consistent with the build setting)
 - `bitchatShareExtension/Info.plist` → `CFBundleDisplayName = MINATO`
 - `bitchat/LaunchScreen.storyboard` → splash label text `MINATO`
 - `bitchat/Views/ContentView.swift` header → `Text(verbatim: MinatoBrand.headerTitle)` (not `"bitchat/"`)
