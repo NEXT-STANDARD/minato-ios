@@ -276,18 +276,18 @@ struct DisasterModeView: View {
     }
 
     private var backgroundColor: Color {
-        colorScheme == .dark ? .black : .white
+        MinatoTheme.background(colorScheme)
     }
 
     private var textColor: Color {
-        colorScheme == .dark ? .green : Color(red: 0, green: 0.5, blue: 0)
+        MinatoTheme.ink(colorScheme)
     }
 
     private var secondaryTextColor: Color {
-        textColor.opacity(0.75)
+        MinatoTheme.inkSecondary(colorScheme)
     }
 
     private var panelBackground: Color {
-        colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04)
+        MinatoTheme.surface(colorScheme)
     }
 }

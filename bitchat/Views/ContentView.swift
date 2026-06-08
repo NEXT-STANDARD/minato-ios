@@ -87,15 +87,15 @@ struct ContentView: View {
     // MARK: - Computed Properties
     
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color.black : Color.white
+        MinatoTheme.background(colorScheme)
     }
 
     private var textColor: Color {
-        colorScheme == .dark ? Color.green : Color(red: 0, green: 0.5, blue: 0)
+        MinatoTheme.ink(colorScheme)
     }
 
     private var secondaryTextColor: Color {
-        colorScheme == .dark ? Color.green.opacity(0.8) : Color(red: 0, green: 0.5, blue: 0).opacity(0.8)
+        MinatoTheme.inkSecondary(colorScheme)
     }
 
     private var headerLineLimit: Int? {
