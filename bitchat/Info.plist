@@ -35,21 +35,21 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>bitchat uses Bluetooth to create a secure mesh network for chatting with nearby users.</string>
+	<string>MINATO uses Bluetooth to create a secure mesh network for chatting with nearby people, even when you are offline.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>bitchat uses Bluetooth to discover and connect with other bitchat users nearby.</string>
+	<string>MINATO uses Bluetooth to discover and connect with other MINATO users nearby.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>スケジュール調整で合意したイベントをカレンダーに登録します。</string>
+	<string>MINATO adds events you agree on while scheduling to your calendar.</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>スケジュール調整で合意したイベントをカレンダーに登録します。</string>
+	<string>MINATO adds events you agree on while scheduling to your calendar.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>bitchat uses the camera to scan QR codes to verify peers.</string>
+	<string>MINATO uses the camera to scan QR codes that verify the people you chat with.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>bitchat uses your approximate location to compute local geohash channels for optional public chats. Exact GPS is never shared.</string>
+	<string>MINATO uses your approximate location to find local public channels and share your area in disaster mode. Your exact GPS location is never shared automatically.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>bitchat uses the microphone to record voice notes that relay across the mesh.</string>
+	<string>MINATO uses the microphone to record voice notes that relay across the mesh.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>bitchat lets you pick images from your photo library to share with nearby peers.</string>
+	<string>MINATO lets you pick photos from your library to share with nearby people.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>
