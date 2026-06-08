@@ -65,7 +65,7 @@ struct MINATOOnboardingSheet: View {
                     // Tips
                     section(
                         icon: "lightbulb",
-                        color: .yellow,
+                        color: MinatoTheme.beacon,
                         title: "試してみよう",
                         body: "「今夜飲み行こう？」のような予定の相談をすると、AIが日時・場所まで提案して、相手に構造化された招待を送ります。"
                     )

@@ -60,6 +60,24 @@ enum MinatoTheme {
     /// read as "emergency" when disaster mode is active.
     static func tint(alert: Bool = false) -> Color { alert ? alertAccent : accent }
 
+    // MARK: - Categorical identifiers (transport / identity / favorite)
+    //
+    // Distinct hues that encode *what something is* rather than a surface/state.
+    // Tokenized here so the meaning lives in one place (was scattered raw
+    // .purple / .orange / .yellow literals before).
+
+    /// Nostr / internet-relay reachability (globe indicators). A far-horizon
+    /// violet, deliberately distinct from the teal "local sea" accent.
+    static let nostr = Color(red: 0.49, green: 0.40, blue: 0.78)
+
+    /// "You" — the local user's own identity highlight: own nickname, self
+    /// mentions, and the self row in peer/people lists. A warm orange kept
+    /// recognizable from the bitchat heritage.
+    static let selfMark = Color(red: 0.93, green: 0.49, blue: 0.16)
+
+    /// Favorite / starred peer. Warm gold.
+    static let favorite = Color(red: 0.95, green: 0.76, blue: 0.20)
+
     // MARK: - Safety semantics (shared peacetime/disaster)
 
     static let safe   = Color(red: 0.25, green: 0.71, blue: 0.42)

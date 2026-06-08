@@ -58,7 +58,7 @@ struct GeohashPeopleList: View {
                         let teleported = viewModel.teleportedGeo.contains(person.id.lowercased()) || (isMe && LocationChannelManager.shared.teleported)
                         let icon = teleported ? "face.dashed" : "mappin.and.ellipse"
                         let assignedColor = viewModel.colorForNostrPubkey(person.id, isDark: colorScheme == .dark)
-                        let rowColor: Color = isMe ? .orange : assignedColor
+                        let rowColor: Color = isMe ? MinatoTheme.selfMark : assignedColor
                         Image(systemName: icon).font(.bitchatSystem(size: 12)).foregroundColor(rowColor)
 
                         let (base, suffix) = person.displayName.splitSuffix()
@@ -68,7 +68,7 @@ struct GeohashPeopleList: View {
                                 .fontWeight(isMe ? .bold : .regular)
                                 .foregroundColor(rowColor)
                             if !suffix.isEmpty {
-                                let suffixColor = isMe ? Color.orange.opacity(0.6) : rowColor.opacity(0.6)
+                                let suffixColor = isMe ? MinatoTheme.selfMark.opacity(0.6) : rowColor.opacity(0.6)
                                 Text(suffix)
                                     .font(.bitchatSystem(size: 14, design: .monospaced))
                                     .foregroundColor(suffixColor)
