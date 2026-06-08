@@ -15,7 +15,7 @@ struct LocationChannelsSheet: View {
     @State private var customGeohash: String = ""
     @State private var customError: String? = nil
 
-    private var backgroundColor: Color { colorScheme == .dark ? .black : .white }
+    private var backgroundColor: Color { MinatoTheme.background(colorScheme) }
 
     private enum Strings {
         static let title: LocalizedStringKey = "location_channels.title"
@@ -249,10 +249,10 @@ struct LocationChannelsSheet: View {
                     Button(action: SystemSettings.location.open) {
                         Text(Strings.removeAccess)
                             .font(.bitchatSystem(size: 12, design: .monospaced))
-                            .foregroundColor(Color(red: 0.75, green: 0.1, blue: 0.1))
+                            .foregroundColor(MinatoTheme.danger)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
-                            .background(Color.red.opacity(0.08))
+                            .background(MinatoTheme.danger.opacity(0.08))
                             .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
@@ -334,7 +334,7 @@ struct LocationChannelsSheet: View {
             if let err = customError {
                 Text(err)
                     .font(.bitchatSystem(size: 12, design: .monospaced))
-                    .foregroundColor(.red)
+                    .foregroundColor(MinatoTheme.danger)
             }
         }
     }
@@ -512,7 +512,7 @@ extension LocationChannelsSheet {
     }
 
     private var standardGreen: Color {
-        (colorScheme == .dark) ? Color.green : Color(red: 0, green: 0.5, blue: 0)
+        MinatoTheme.accent
     }
     private var standardBlue: Color {
         Color(red: 0.0, green: 0.478, blue: 1.0)

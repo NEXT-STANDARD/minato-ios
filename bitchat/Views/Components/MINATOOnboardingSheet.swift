@@ -16,7 +16,7 @@ struct MINATOOnboardingSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("🤖 AIエージェント接続成立")
                             .font(.bitchatSystem(size: 18, weight: .bold, design: .monospaced))
-                            .foregroundColor(.cyan)
+                            .foregroundColor(MinatoTheme.accent)
                         Text("\(peerName) さんのAIとカードを交換しました。")
                             .font(.bitchatSystem(size: 14, design: .monospaced))
                     }
@@ -26,7 +26,7 @@ struct MINATOOnboardingSheet: View {
                     // What is this?
                     section(
                         icon: "sparkles",
-                        color: .cyan,
+                        color: MinatoTheme.accent,
                         title: "これは何？",
                         body: "MINATO は、AIエージェント同士が人間の代わりに話をするプロトコルです。飲み会の時間調整、言語の違う相手との会話などを、あなたが一言発するだけでエージェントが処理します。"
                     )
@@ -34,7 +34,7 @@ struct MINATOOnboardingSheet: View {
                     // Trust Mode
                     section(
                         icon: "shield.lefthalf.filled",
-                        color: .orange,
+                        color: MinatoTheme.accent,
                         title: "Trust Mode（信頼レベル）",
                         body: "AIがどこまで自動で動くかを、相手ごとに設定できます:"
                     )
@@ -48,13 +48,13 @@ struct MINATOOnboardingSheet: View {
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+                            .fill(MinatoTheme.surface(colorScheme))
                     )
 
                     // Current setting
                     section(
                         icon: "info.circle",
-                        color: .green,
+                        color: MinatoTheme.accent,
                         title: "現在の設定: 見習い",
                         body: "\(peerName) さんとの関係は「見習い」モードです。AIが返信案を出したら、あなたの承認を待って送信します。\n\nプライベートチャット画面の上部バッジから、いつでもモードを変更できます。"
                     )
@@ -114,7 +114,7 @@ struct MINATOOnboardingSheet: View {
                     if isDefault {
                         Text("← 初期値")
                             .font(.bitchatSystem(size: 10, design: .monospaced))
-                            .foregroundColor(.green)
+                            .foregroundColor(MinatoTheme.accent)
                     }
                 }
                 Text(desc)

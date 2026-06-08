@@ -315,7 +315,7 @@ struct ContentView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .buttonStyle(.plain)
-                        .background(Color.gray.opacity(0.1))
+                        .background(MinatoTheme.surface(colorScheme))
                     }
                 }
                 .background(backgroundColor)
@@ -352,7 +352,7 @@ struct ContentView: View {
                 .padding(.horizontal, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(colorScheme == .dark ? Color.black.opacity(0.35) : Color.white.opacity(0.7))
+                        .fill(MinatoTheme.surface(colorScheme))
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .onChange(of: messageText) { newValue in
@@ -385,7 +385,7 @@ struct ContentView: View {
                 .padding(.horizontal, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(colorScheme == .dark ? Color.black.opacity(0.35) : Color.white.opacity(0.7))
+                        .fill(MinatoTheme.surface(colorScheme))
                 )
                 .modifier(FocusEffectDisabledModifier())
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -534,7 +534,7 @@ struct ContentView: View {
                         case .mesh:
                             return Color.blue
                         case .location:
-                            return Color.green
+                            return MinatoTheme.accent
                         }
                     }()
                     HStack(spacing: 6) {
@@ -793,7 +793,7 @@ struct ContentView: View {
                             .font(.bitchatSystem(size: 14))
                             .foregroundColor(encryptionStatus == .noiseVerified ? textColor :
                                              encryptionStatus == .noiseSecured ? textColor :
-                                             Color.red)
+                                             MinatoTheme.danger)
                             .accessibilityLabel(
                                 String(
                                     format: String(localized: "content.accessibility.encryption_status", comment: "Accessibility label announcing encryption status"),
@@ -874,8 +874,7 @@ struct ContentView: View {
         switch locationManager.selectedChannel {
         case .location:
             let n = viewModel.geohashPeople.count
-            let standardGreen = (colorScheme == .dark) ? Color.green : Color(red: 0, green: 0.5, blue: 0)
-            return (n, n > 0 ? standardGreen : Color.secondary)
+            return (n, n > 0 ? MinatoTheme.accent : Color.secondary)
         case .mesh:
             let counts = viewModel.allPeers.reduce(into: (others: 0, mesh: 0)) { counts, peer in
                 guard peer.peerID != viewModel.meshService.myPeerID else { return }
@@ -951,7 +950,7 @@ struct ContentView: View {
                     Button(action: { viewModel.openMostRelevantPrivateChat() }) {
                         Image(systemName: "envelope.fill")
                             .font(.bitchatSystem(size: 12))
-                            .foregroundColor(Color.orange)
+                            .foregroundColor(MinatoTheme.beacon)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(
@@ -972,7 +971,7 @@ struct ContentView: View {
                         HStack(alignment: .center, spacing: 4) {
                             Image(systemName: "note.text")
                                 .font(.bitchatSystem(size: 12))
-                                .foregroundColor(Color.orange.opacity(0.8))
+                                .foregroundColor(MinatoTheme.beacon.opacity(0.8))
                                 .padding(.top, 1)
                         }
                         .fixedSize(horizontal: true, vertical: false)
@@ -1012,7 +1011,7 @@ struct ContentView: View {
                         case .mesh:
                             return Color(hue: 0.60, saturation: 0.85, brightness: 0.82)
                         case .location:
-                            return (colorScheme == .dark) ? Color.green : Color(red: 0, green: 0.5, blue: 0)
+                            return MinatoTheme.accent
                         }
                     }()
                     Text(badgeText)
@@ -1246,7 +1245,7 @@ private extension ContentView {
     var recordingIndicator: some View {
         HStack(spacing: 12) {
             Image(systemName: "waveform.circle.fill")
-                .foregroundColor(.red)
+                .foregroundColor(MinatoTheme.danger)
                 .font(.bitchatSystem(size: 20))
             TimelineView(.periodic(from: .now, by: 0.05)) { context in
                 Text(
@@ -1254,21 +1253,21 @@ private extension ContentView {
                     comment: "Voice note recording duration indicator"
                 )
                 .font(.bitchatSystem(size: 13, design: .monospaced))
-                .foregroundColor(.red)
+                .foregroundColor(MinatoTheme.danger)
             }
             Spacer()
             Button(action: voiceRecordingVM.cancel) {
                 Label("Cancel", systemImage: "xmark.circle")
                     .labelStyle(.iconOnly)
                     .font(.bitchatSystem(size: 18))
-                    .foregroundColor(.red)
+                    .foregroundColor(MinatoTheme.danger)
             }
             .buttonStyle(.plain)
         }
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.red.opacity(0.15))
+                .fill(MinatoTheme.danger.opacity(0.15))
         )
     }
 
@@ -1337,11 +1336,13 @@ private extension ContentView {
     }
 
     private func trustModeColor(_ mode: TrustMode) -> Color {
+        // Autonomy ramp (low -> high): cool/safe -> warm/high-power, kept fully
+        // distinct so each trust mode reads at a glance.
         switch mode {
-        case .plan:     return .orange
-        case .suggest:  return .cyan
-        case .auto:     return .green
-        case .fullAuto: return .purple
+        case .plan:     return MinatoTheme.safe    // manual: nothing happens without you
+        case .suggest:  return MinatoTheme.accent  // teal "sea": suggests, you confirm
+        case .auto:     return MinatoTheme.beacon  // amber beacon: acts on its own
+        case .fullAuto: return MinatoTheme.danger  // fully autonomous: highest power
         }
     }
 
@@ -1353,10 +1354,10 @@ private extension ContentView {
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.bitchatSystem(size: 11))
-                    .foregroundColor(.cyan)
+                    .foregroundColor(MinatoTheme.accent)
                 Text("AI返答案")
                     .font(.bitchatSystem(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.cyan)
+                    .foregroundColor(MinatoTheme.accent)
                 Spacer()
                 Button {
                     withAnimation { viewModel.dismissPendingReply(for: peerID) }
@@ -1394,10 +1395,10 @@ private extension ContentView {
                         Text("送信")
                             .font(.bitchatSystem(size: 11, weight: .semibold, design: .monospaced))
                     }
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
-                    .background(Color.cyan)
+                    .background(MinatoTheme.accent)
                     .cornerRadius(12)
                 }
                 .buttonStyle(.plain)
@@ -1412,10 +1413,10 @@ private extension ContentView {
                         Text("編集")
                             .font(.bitchatSystem(size: 11, design: .monospaced))
                     }
-                    .foregroundColor(.cyan)
+                    .foregroundColor(MinatoTheme.accent)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
-                    .background(Color.cyan.opacity(0.15))
+                    .background(MinatoTheme.accent.opacity(0.15))
                     .cornerRadius(12)
                 }
                 .buttonStyle(.plain)
@@ -1426,7 +1427,7 @@ private extension ContentView {
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(colorScheme == .dark ? Color.cyan.opacity(0.08) : Color.cyan.opacity(0.05))
+                .fill(colorScheme == .dark ? MinatoTheme.accent.opacity(0.08) : MinatoTheme.accent.opacity(0.05))
         )
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
@@ -1439,10 +1440,10 @@ private extension ContentView {
             HStack(spacing: 6) {
                 Image(systemName: "calendar.badge.clock")
                     .font(.bitchatSystem(size: 11))
-                    .foregroundColor(.orange)
+                    .foregroundColor(MinatoTheme.warn)
                 Text("\(approval.peerName) からのスケジュール提案")
                     .font(.bitchatSystem(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.orange)
+                    .foregroundColor(MinatoTheme.warn)
                 Spacer()
                 Button {
                     withAnimation { viewModel.declineSchedule(requestId: approval.requestId) }
@@ -1469,7 +1470,7 @@ private extension ContentView {
                 if approval.hasConflict {
                     Text("⚠️ この時間帯に予定があります")
                         .font(.bitchatSystem(size: 11, design: .monospaced))
-                        .foregroundColor(.red)
+                        .foregroundColor(MinatoTheme.warn)
                 }
             }
 
@@ -1486,7 +1487,7 @@ private extension ContentView {
                     .foregroundColor(.black)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
-                    .background(Color.green)
+                    .background(MinatoTheme.safe)
                     .cornerRadius(12)
                 }
                 .buttonStyle(.plain)
@@ -1501,10 +1502,10 @@ private extension ContentView {
                         Text("別日提案")
                             .font(.bitchatSystem(size: 11, design: .monospaced))
                     }
-                    .foregroundColor(.orange)
+                    .foregroundColor(MinatoTheme.warn)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
-                    .background(Color.orange.opacity(0.15))
+                    .background(MinatoTheme.warn.opacity(0.15))
                     .cornerRadius(12)
                 }
                 .buttonStyle(.plain)
@@ -1518,10 +1519,10 @@ private extension ContentView {
                         Text("辞退")
                             .font(.bitchatSystem(size: 11, design: .monospaced))
                     }
-                    .foregroundColor(.red.opacity(0.8))
+                    .foregroundColor(MinatoTheme.danger.opacity(0.8))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
-                    .background(Color.red.opacity(0.1))
+                    .background(MinatoTheme.danger.opacity(0.1))
                     .cornerRadius(12)
                 }
                 .buttonStyle(.plain)
@@ -1532,14 +1533,14 @@ private extension ContentView {
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(colorScheme == .dark ? Color.orange.opacity(0.08) : Color.orange.opacity(0.05))
+                .fill(colorScheme == .dark ? MinatoTheme.warn.opacity(0.08) : MinatoTheme.warn.opacity(0.05))
         )
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
     }
 
     private var composerAccentColor: Color {
-        viewModel.selectedPrivateChatPeer != nil ? Color.orange : textColor
+        viewModel.selectedPrivateChatPeer != nil ? MinatoTheme.accent : textColor
     }
 
     var attachmentButton: some View {
@@ -1594,7 +1595,7 @@ private extension ContentView {
     private var micButtonView: some View {
         Image(systemName: "mic.circle.fill")
             .font(.bitchatSystem(size: 24))
-            .foregroundColor(voiceRecordingVM.state.isActive ? Color.red : composerAccentColor)
+            .foregroundColor(voiceRecordingVM.state.isActive ? MinatoTheme.danger : composerAccentColor)
             .frame(width: 36, height: 36)
             .contentShape(Circle())
             .overlay(

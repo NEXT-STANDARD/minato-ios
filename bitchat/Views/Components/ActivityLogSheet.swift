@@ -85,9 +85,9 @@ struct ActivityLogSheet: View {
 
     private func colorFor(action: AgentActivityLog.ActionType) -> Color {
         switch action {
-        case .autoReply: return .cyan
-        case .autoScheduleAck: return .green
-        case .autoScheduleReject: return .red
+        case .autoReply: return MinatoTheme.accent
+        case .autoScheduleAck: return MinatoTheme.safe
+        case .autoScheduleReject: return MinatoTheme.danger
         }
     }
 }

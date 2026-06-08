@@ -15,11 +15,11 @@ struct DeliveryStatusView: View {
     // MARK: - Computed Properties
     
     private var textColor: Color {
-        colorScheme == .dark ? Color.green : Color(red: 0, green: 0.5, blue: 0)
+        MinatoTheme.ink(colorScheme)
     }
-    
+
     private var secondaryTextColor: Color {
-        colorScheme == .dark ? Color.green.opacity(0.8) : Color(red: 0, green: 0.5, blue: 0).opacity(0.8)
+        MinatoTheme.inkSecondary(colorScheme)
     }
 
     private enum Strings {
@@ -94,7 +94,7 @@ struct DeliveryStatusView: View {
         case .failed(let reason):
             Image(systemName: "exclamationmark.triangle")
                 .font(.bitchatSystem(size: 10))
-                .foregroundColor(Color.red.opacity(0.8))
+                .foregroundColor(MinatoTheme.danger.opacity(0.8))
                 .help(Strings.failed(reason))
             
         case .partiallyDelivered(let reached, let total):

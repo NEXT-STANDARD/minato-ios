@@ -37,7 +37,7 @@ struct SafetyHeaderView: View {
         Button(action: onRequestActivate) {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
+                    .foregroundColor(MinatoTheme.warn)
                 Text("災害モード")
                     .font(.bitchatSystem(size: 13, weight: .semibold, design: .monospaced))
                     .foregroundColor(.primary)
@@ -63,10 +63,10 @@ struct SafetyHeaderView: View {
         Button(action: onOpenDashboard) {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.red)
+                    .foregroundColor(MinatoTheme.danger)
                 Text("災害モード ON")
                     .font(.bitchatSystem(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundColor(.red)
+                    .foregroundColor(MinatoTheme.danger)
                 Spacer()
                 Text(store.status.headerLabel)
                     .font(.bitchatSystem(size: 12, weight: .semibold, design: .monospaced))
@@ -77,7 +77,7 @@ struct SafetyHeaderView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Color.red.opacity(0.08))
+            .background(MinatoTheme.danger.opacity(0.08))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("災害モード ON、現在のステータスは \(store.status.headerLabel)")

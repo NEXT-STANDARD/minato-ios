@@ -55,10 +55,10 @@ struct PaymentChipView: View {
     let paymentType: PaymentType
     
     private var fgColor: Color {
-        colorScheme == .dark ? Color.green : Color(red: 0, green: 0.5, blue: 0)
+        MinatoTheme.ink(colorScheme)
     }
     private var bgColor: Color {
-        colorScheme == .dark ? Color.gray.opacity(0.18) : Color.gray.opacity(0.12)
+        MinatoTheme.surface(colorScheme)
     }
     private var border: Color { fgColor.opacity(0.25) }
     

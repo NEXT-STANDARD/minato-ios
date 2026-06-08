@@ -45,7 +45,7 @@ struct TextMessageView: View {
                     else { expandedMessageIDs.insert(message.id) }
                 }
                 .font(.bitchatSystem(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(Color.blue)
+                .foregroundColor(MinatoTheme.accent)
                 .padding(.top, 4)
             }
 
