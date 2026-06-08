@@ -30,6 +30,7 @@ merge, re-check / re-apply:
 
 - `bitchat.xcodeproj/project.pbxproj` → `INFOPLIST_KEY_CFBundleDisplayName = MINATO` (6 build configs: iOS/macOS app + share extension × Debug/Release). **This build setting overrides the Info.plist value**, so it is the authoritative home-screen name.
 - `bitchat/Info.plist` → `CFBundleDisplayName = MINATO` (kept consistent with the build setting)
+- `bitchat/Info.plist` → `CFBundleURLSchemes` registers **both** `minato` and `bitchat` (URL-scheme migration Phase 1; see `docs/MINATO-url-scheme.md`). The inbound handlers route through `MinatoBrand.acceptsURLScheme(_:)`.
 - `bitchatShareExtension/Info.plist` → `CFBundleDisplayName = MINATO`
 - `bitchat/LaunchScreen.storyboard` → splash label text `MINATO`
 - `bitchat/Views/ContentView.swift` header → `Text(verbatim: MinatoBrand.headerTitle)` (not `"bitchat/"`)

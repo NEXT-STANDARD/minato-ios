@@ -27,7 +27,7 @@ struct NostrEmbeddedBitChat {
         )
 
         guard let data = packet.toBinaryData() else { return nil }
-        return "bitchat1:" + base64URLEncode(data)
+        return MinatoBrand.nostrEmbedPrefix + base64URLEncode(data)
     }
 
     /// Build a `bitchat1:` base64url-encoded BitChat packet carrying a delivery/read ack for Nostr DMs.
@@ -50,7 +50,7 @@ struct NostrEmbeddedBitChat {
         )
 
         guard let data = packet.toBinaryData() else { return nil }
-        return "bitchat1:" + base64URLEncode(data)
+        return MinatoBrand.nostrEmbedPrefix + base64URLEncode(data)
     }
 
     /// Build a `bitchat1:` ACK (delivered/read) without an embedded recipient peer ID (geohash DMs).
@@ -71,7 +71,7 @@ struct NostrEmbeddedBitChat {
         )
 
         guard let data = packet.toBinaryData() else { return nil }
-        return "bitchat1:" + base64URLEncode(data)
+        return MinatoBrand.nostrEmbedPrefix + base64URLEncode(data)
     }
 
     /// Build a `bitchat1:` payload without an embedded recipient peer ID (used for geohash DMs).
@@ -93,7 +93,7 @@ struct NostrEmbeddedBitChat {
         )
 
         guard let data = packet.toBinaryData() else { return nil }
-        return "bitchat1:" + base64URLEncode(data)
+        return MinatoBrand.nostrEmbedPrefix + base64URLEncode(data)
     }
 
     // MARK: - MINATO Agent Protocol
@@ -113,7 +113,7 @@ struct NostrEmbeddedBitChat {
         )
 
         guard let data = packet.toBinaryData() else { return nil }
-        return "bitchat1:" + base64URLEncode(data)
+        return MinatoBrand.nostrEmbedPrefix + base64URLEncode(data)
     }
 
     /// Check if a decoded BitchatPacket is a MINATO agent message (0x30–0x37).
