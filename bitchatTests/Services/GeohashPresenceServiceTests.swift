@@ -122,20 +122,28 @@ final class GeohashPresenceServiceTests: XCTestCase {
         XCTAssertEqual(scheduler.intervals, [22])
     }
 
-    func test_broadcastPresence_skipsSendWhenNoRelaysAreAvailable() async throws {
+    func test_broadcastPresence_usesDefaultRelayBackboneWhenGeoLookupEmpty() async throws {
         let identity = try NostrIdentity.generate()
         var sendCount = 0
+        var lastTargets: [String] = []
         let service = makeService(
             scheduler: MockGeohashPresenceScheduler(),
             deriveIdentity: { _ in identity },
             relayLookup: { _, _ in [] },
-            relaySender: { _, _ in sendCount += 1 }
+            relaySender: { _, relays in
+                sendCount += 1
+                lastTargets = relays
+            }
         )
 
         service.broadcastPresence(for: "9q8yy")
         try? await Task.sleep(nanoseconds: 20_000_000)
 
-        XCTAssertEqual(sendCount, 0)
+        // Per the default-relay backbone (commit 108175e), presence is still
+        // broadcast to the default relays even when no geohash-specific relays
+        // resolve — so a send DOES happen, targeting the default backbone.
+        XCTAssertEqual(sendCount, 1)
+        XCTAssertFalse(lastTargets.isEmpty)
     }
 
     func test_broadcastPresence_skipsSendWhenIdentityDerivationFails() async {
