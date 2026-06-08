@@ -1158,6 +1158,7 @@ struct ContentView: View {
             Button("起動する", role: .destructive) {
                 safetyStore.activate()
                 viewModel.broadcastSafetyCheckin(safetyStore.checkin)
+                viewModel.startSafetyBroadcast()
                 showSafetyDashboard = true
             }
             Button("キャンセル", role: .cancel) { }
@@ -1169,7 +1170,12 @@ struct ContentView: View {
             DisasterModeView(
                 store: safetyStore,
                 onDismiss: { showSafetyDashboard = false },
-                onBroadcast: { viewModel.broadcastSafetyCheckin($0) }
+                onBroadcast: { viewModel.broadcastSafetyCheckin($0) },
+                onDeactivate: {
+                    viewModel.stopSafetyBroadcast()
+                    safetyStore.deactivate()
+                    showSafetyDashboard = false
+                }
             )
         }
 #else
@@ -1177,7 +1183,12 @@ struct ContentView: View {
             DisasterModeView(
                 store: safetyStore,
                 onDismiss: { showSafetyDashboard = false },
-                onBroadcast: { viewModel.broadcastSafetyCheckin($0) }
+                onBroadcast: { viewModel.broadcastSafetyCheckin($0) },
+                onDeactivate: {
+                    viewModel.stopSafetyBroadcast()
+                    safetyStore.deactivate()
+                    showSafetyDashboard = false
+                }
             )
         }
 #endif

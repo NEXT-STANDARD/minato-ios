@@ -472,7 +472,7 @@ Canonical example: `docs/examples/minato-ios/safety_checkin.json`.
 - **Dedupe / expiry**: receivers store check-ins keyed by `id`, replacing on repeat and dropping entries past `expires_at`.
 - **Direct vs relayed**: receivers derive best-effort delivery metadata from the packet TTL (`hops = safetyTTL − packet.ttl`; `direct` when `hops == 0`) for display. This is receive-side metadata, separate from the signed `relay` object.
 
-Status: E-2 = models + envelope encode/decode + golden example. E-3a = broadcast send + TOFU reception + dedupe/expiry + direct/relayed display. E-3b (pending) = periodic re-broadcast with battery-aware throttling.
+Status: E-2 = models + envelope encode/decode + golden example. E-3a = broadcast send + TOFU reception + dedupe/expiry + direct/relayed display. E-3b = periodic re-broadcast throttled by battery / Low Power Mode (`SafetyBroadcastPolicy`: base 5 min, ≤ 30 min, never fully stops).
 
 ---
 

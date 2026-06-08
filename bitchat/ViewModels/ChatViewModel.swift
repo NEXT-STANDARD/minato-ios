@@ -287,6 +287,14 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
     let meshService: Transport
     let idBridge: NostrIdentityBridge
     let identityManager: SecureIdentityStateManagerProtocol
+
+    /// Re-broadcasts the local safety check-in on a battery-throttled interval
+    /// while disaster mode is active (E-3b). Started/stopped from disaster-mode
+    /// activation/exit via `startSafetyBroadcast()` / `stopSafetyBroadcast()`.
+    private(set) lazy var safetyBroadcastScheduler = SafetyBroadcastScheduler(
+        currentCheckin: { SafetyModeStore.shared.isActive ? SafetyModeStore.shared.checkin : nil },
+        broadcast: { [weak self] checkin in self?.broadcastSafetyCheckin(checkin) }
+    )
     
     var nostrRelayManager: NostrRelayManager?
     private let userDefaults = UserDefaults.standard
