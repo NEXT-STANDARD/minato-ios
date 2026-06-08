@@ -17,7 +17,9 @@ struct DisasterModeView: View {
     /// periodic re-broadcast and deactivate.
     var onDeactivate: () -> Void = {}
 
+    @EnvironmentObject private var viewModel: ChatViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showEmergencyContacts = false
 
     private var checkin: SafetyCheckin { store.checkin }
 
@@ -30,6 +32,7 @@ struct DisasterModeView: View {
                     nearbyInformation
                     policyNote
                     if store.isActive {
+                        emergencyContactsButton
                         deactivateButton
                     }
                 }
@@ -49,6 +52,9 @@ struct DisasterModeView: View {
         }
         .onAppear {
             store.refresh()
+        }
+        .sheet(isPresented: $showEmergencyContacts) {
+            EmergencyContactsSheet(onClose: { showEmergencyContacts = false })
         }
     }
 
@@ -176,6 +182,16 @@ struct DisasterModeView: View {
                 .foregroundColor(secondaryTextColor)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private var emergencyContactsButton: some View {
+        Button {
+            showEmergencyContacts = true
+        } label: {
+            Label("緊急連絡先を管理", systemImage: "person.2.fill")
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(.bordered)
     }
 
     private var deactivateButton: some View {
