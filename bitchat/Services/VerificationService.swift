@@ -42,9 +42,9 @@ final class VerificationService {
 
         func toURLString() -> String {
             var comps = URLComponents()
-            // Cross-device QR: keep emitting the legacy scheme so existing
-            // bitchat / older-MINATO apps can still scan it (Phase 1 interop).
-            comps.scheme = MinatoBrand.legacyURLScheme
+            // Phase 2: emit the minato:// scheme for verification QR. Scanners still
+            // accept bitchat:// (fromURL is dual-scheme), so older codes keep working.
+            comps.scheme = MinatoBrand.urlScheme
             comps.host = "verify"
             comps.queryItems = [
                 URLQueryItem(name: "v", value: String(v)),

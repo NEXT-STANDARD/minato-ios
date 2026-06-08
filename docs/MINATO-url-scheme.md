@@ -12,8 +12,8 @@ All scheme strings are single-sourced in `MinatoBrand`
 
 | Class | Examples | Crosses a boundary? | Migration |
 |---|---|---|---|
-| **In-app deep links** | `://user/<id>`, `://geohash/<gh>`, `://share`, notification deeplinks | No — same app instance generates & handles them | **Emit `minato://`** now |
-| **QR verification** | `://verify?…` | Yes — scanned by *another device* (possibly an older app) | **Keep emitting `bitchat://verify`**; accept both on scan |
+| **In-app deep links** | `://user/<id>`, `://geohash/<gh>`, `://share`, notification deeplinks | No — same app instance generates & handles them | **Emit `minato://`** (Phase 1) |
+| **QR verification** | `://verify?…` | Yes — scanned by *another device* (possibly an older app) | **Emit `minato://verify`** (Phase 2); accept both on scan |
 | **Nostr embed** | `bitchat1:<base64url>` packet in Nostr DMs | Yes — wire format shared with the bitchat Nostr network | **Keep emitting `bitchat1:`**; accept both on receive |
 
 ## Phase 1 (current) — "accept both, emit new where safe"
@@ -36,16 +36,21 @@ Decided strategy: **interop-first / staged**.
 This is fully backward compatible: existing `bitchat://` links, old QR codes, and
 the bitchat Nostr network keep working; nothing a current install produced breaks.
 
-## Phase 2 (later) — flip the wire formats
+## Phase 2 (partial — done) — flip QR verify
 
-Once enough installs accept `minato://` / `minato1:` (and, for Nostr, once the
-change is reflected in `minato-spec` with version negotiation), flip:
+`VerificationQR.toURLString()` now emits `minato://verify` (scanners still accept
+`bitchat://verify` — `fromURL` is dual-scheme, so older codes keep working).
 
-- `VerificationQR.toURLString()` → `minato://verify`
-- `NostrEmbeddedBitChat` → `minato1:`
+**Nostr embed intentionally stays `bitchat1:`** — it is delivered over Nostr
+relays to a wider audience (including the bitchat network and older MINATO
+installs), so flipping it to `minato1:` would break relayed DMs to anyone not yet
+on this build. That flip is deferred until adoption catches up *and* the change is
+coordinated in `minato-spec` with version negotiation; it is then a one-line
+change (`NostrEmbeddedBitChat` → `MinatoBrand.urlScheme + "1:"`). Inbound already
+accepts `minato1:`.
 
-then eventually stop registering/emitting `bitchat://` (keep *accepting* it for a
-long tail). Each flip is a one-line change in `MinatoBrand`.
+Eventually `bitchat://` can stop being registered/emitted entirely (keep
+*accepting* it for a long tail).
 
 ## NOT a scheme (do not touch)
 
