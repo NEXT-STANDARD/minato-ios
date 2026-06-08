@@ -64,6 +64,11 @@ struct ContentView: View {
     @State private var showActivityLogSheet = false
     @State private var activityLogPeerID: PeerID? = nil
     @State private var showOnboardingSheet = false
+    // Disaster mode (D-3): observe the shared Safety store, gate activation
+    // behind a confirmation prompt, present the dashboard full-screen.
+    @ObservedObject private var safetyStore = SafetyModeStore.shared
+    @State private var showSafetyActivateConfirm = false
+    @State private var showSafetyDashboard = false
     @State private var onboardingPeerName: String = ""
 #if os(iOS)
     @State private var showImagePicker = false
@@ -131,6 +136,12 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            SafetyHeaderView(
+                store: safetyStore,
+                onRequestActivate: { showSafetyActivateConfirm = true },
+                onOpenDashboard: { showSafetyDashboard = true }
+            )
+
             mainHeaderView
                 .onAppear {
                     viewModel.currentColorScheme = colorScheme
@@ -947,6 +958,7 @@ struct ContentView: View {
                         String(localized: "content.accessibility.open_unread_private_chat", comment: "Accessibility label for the unread private chat button")
                     )
                 }
+
                 // Notes icon (mesh only and when location is authorized), to the left of #mesh
                 if case .mesh = locationManager.selectedChannel, locationManager.permissionState == .authorized {
                     Button(action: {
@@ -1138,6 +1150,28 @@ struct ContentView: View {
                 )
             }
         }
+        .confirmationDialog(
+            "災害モードを起動しますか？",
+            isPresented: $showSafetyActivateConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("起動する", role: .destructive) {
+                safetyStore.activate()
+                showSafetyDashboard = true
+            }
+            Button("キャンセル", role: .cancel) { }
+        } message: {
+            Text("ON 中は安否情報を周辺に発信します。")
+        }
+#if os(iOS)
+        .fullScreenCover(isPresented: $showSafetyDashboard) {
+            DisasterModeView(store: safetyStore, onDismiss: { showSafetyDashboard = false })
+        }
+#else
+        .sheet(isPresented: $showSafetyDashboard) {
+            DisasterModeView(store: safetyStore, onDismiss: { showSafetyDashboard = false })
+        }
+#endif
         .sheet(isPresented: $showOnboardingSheet) {
             MINATOOnboardingSheet(
                 peerName: onboardingPeerName,

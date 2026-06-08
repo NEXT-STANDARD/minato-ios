@@ -3,6 +3,22 @@ import UserNotifications
 @testable import bitchat
 
 final class NotificationServiceTests: XCTestCase {
+    /// `NotificationService` reaches `UNUserNotificationCenter.current()` (e.g.
+    /// notification-category registration during `requestAuthorization`), which
+    /// needs `bundleProxyForCurrentProcess`. That is nil when not hosted in an
+    /// app bundle and aborts the whole process with an uncaught NSException under
+    /// `swift test` (the CI command), taking the entire suite down. These run in
+    /// the Xcode app-hosted target; skip the suite when not running inside an
+    /// `.app` bundle. (Note: `bundleIdentifier` is unreliable here — the CI
+    /// xctest tool has one — so detect via the bundle URL's `.app` extension.)
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        try XCTSkipUnless(
+            Bundle.main.bundleURL.pathExtension == "app",
+            "NotificationService requires a host app bundle (UNUserNotificationCenter); skipped under `swift test`."
+        )
+    }
+
     func test_requestAuthorization_skipsWhenRunningTests() {
         let authorizer = RecordingNotificationAuthorizer()
         let service = NotificationService(

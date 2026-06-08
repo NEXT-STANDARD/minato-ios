@@ -23,6 +23,11 @@ struct AgentCardSigningTests {
         )
     }
 
+    private func tamperHexSignature(_ signature: String) -> String {
+        let replacement = signature.hasSuffix("00") ? "ff" : "00"
+        return String(signature.dropLast(2)) + replacement
+    }
+
     // MARK: - Sign / Verify Round-Trip
 
     @Test("AgentCard sign and verify round-trip succeeds")
@@ -52,8 +57,8 @@ struct AgentCardSigningTests {
         let signed = MINATOSigning.sign(unsigned, using: service)
 
         let originalSig = try #require(signed.signature)
-        // Flip last two hex chars to corrupt the signature
-        let tamperedSig = String(originalSig.dropLast(2)) + "00"
+        // Flip last two hex chars to corrupt the signature.
+        let tamperedSig = tamperHexSignature(originalSig)
         let tampered = signed.signed(with: tamperedSig)
 
         #expect(!MINATOSigning.verify(tampered), "Tampered signature must not verify")
