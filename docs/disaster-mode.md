@@ -381,6 +381,63 @@ let state = UIDevice.current.batteryState // .unknown | .unplugged | .charging |
 
 ---
 
+## 実装ステータス（進捗）
+
+最終更新: 2026-06-08
+
+### フェーズ進捗
+
+| フェーズ | 内容 | 状態 | PR |
+|---|---|---|---|
+| D-0 | 設計ドキュメント（本ファイル） | ✅ merged | #2 |
+| D-1 | 安否ペイロード値型（`DisasterStatus` / `BatteryState` / `DisasterSafetyPayload`、`disaster.*` intent / capability） | ✅ merged | #4 |
+| D-2 | `DisasterModeStore` + battery サンプリング（`BatteryMonitoring` 抽象 / `UIDeviceBatteryMonitor`） | ✅ merged | #5 |
+| D-3 | ホームバナー（`SafetyHeaderView`）+ ON 時ダッシュボード（`DisasterModeView`）+ `ContentView` 配線 | 🟡 in review | #6 |
+| D-4 | 緊急連絡先事前登録 UI（設定 sheet の新セクション、`EmergencyContactStore`） | ⬜ 未着手 | — |
+| D-5 | ステータス 4 段階 picker（F3）+ 家族リスト UI（F3.5） | ⬜ 未着手 | — |
+| D-6 | ロック画面ウィジェット（informational + iOS 17 interactive） | ⬜ 未着手 | — |
+| D-7 | Nostr push トリガ（`disaster.mode_activated` 送受信 + 参加導線） | ⬜ 未着手 | — |
+| D-8 | E2E 動作確認 + バッテリ消費 PoC + drive-by fix | ⬜ 未着手 | — |
+
+### 既に存在する成果物（main にマージ済）
+
+- `bitchat/MINATO/Models/Disaster.swift` — 値型（D-1）
+- `bitchat/MINATO/Services/BatteryMonitor.swift` — `BatteryMonitoring` / `UIDeviceBatteryMonitor` / `PlatformBatteryMonitor`（D-2）
+- `bitchat/MINATO/Services/Stores/DisasterModeStore.swift` — observable state + payload 組立（D-2）
+- `bitchat/MINATO/Models/Capability.swift` — `disasterShareSafety` capability + `disasterSafety` / `disasterSafetyQuery` intent（D-1）
+- テスト: `DisasterSafetyPayloadTests` / `DisasterModeStoreTests`
+
+### D-3 (PR #6) で追加（レビュー中）
+
+- `bitchat/Views/Components/SafetyHeaderView.swift`
+- `bitchat/Views/DisasterModeView.swift`
+- `bitchat/Views/ContentView.swift` への配線（`@ObservedObject DisasterModeStore.shared`、起動 confirmationDialog、fullScreenCover/sheet）
+- テスト: `DisasterModeViewsSmokeTests`
+
+### 後続フェーズの前に解決すべき設計判断（オープン）
+
+1. **broadcast loop の所有者** — 5 分タイマーを誰が持つか（`DisasterModeStore`? 専用 coordinator?）、停止条件、battery/location refresh 頻度。D-2/D-3 で意図的に punt 済み。**これが無いと「ON にしても何も発信しない」UI だけのモード**になる
+2. **CoreLocation 結合** — `DisasterModeStore.updateLocationHint(_:)` への注入元コードが未実装。`LocationStateManager` を踏襲した薄い `LocationHintProvider` adapter が要る。これが無いと `location_hint` が永遠に nil
+3. **status の永続化** — `DisasterModeStore` は in-memory のみ。**再起動で自ステータスが消える**。災害文脈では失いたくない → `TrustStore` パターンで Keychain 永続化を検討
+4. **`MINATOAgentStore` facade との関係** — `DisasterModeStore` は現状 facade の外。一貫したアクセス経路のため facade に取り込むか判断が要る
+5. **`Capability.disasterShareSafety` の動的付与** — D-1 で値型は追加済だが `AgentCard` のデフォルトには非搭載。緊急連絡先登録時（D-4）に動的付与する仕組みが要る
+6. **Nostr push 経由 activate 時の自動 dashboard 表示** — D-3 は人手フローのみ。`onChange(of: isActive)` 監視が未実装（D-7 で顕在化）
+7. **受信した家族安否の格納先** — 別ストア（`RemoteSafetyStore`）か `AgentActivityLog` 拡張か（D-5 着手前に決定）
+
+### 技術債 / 既知の問題
+
+- **pre-existing flaky test（#3）** — `NotificationServiceTests`（NSException でランナー汚染リスク）/ `GeohashPresenceServiceTests` / `FragmentationTests` / `ChatViewModelExtensionsTests`。全 PR の CI が常時 1〜8 件赤。1 件 1 PR で順次解消。最優先は `NotificationServiceTests`
+- **`DisasterModeStore.shared` のスレッド安全性** — `@Published` は main 想定。将来タイマー/transport 経路から触る際に `MainActor` 隔離を要検討
+- **CI 成功が webhook 未配信** — マージ判断は能動ポーリングが必要。`concurrency: cancel-in-progress` を yml に追加すると古い run 自動キャンセルでリソース節約
+
+### 早期検証したいリスク（PoC 推奨）
+
+- iOS バックグラウンドでの BLE 5 分 broadcast が実際に動くか（broadcast loop フェーズの前提）
+- ロック画面ウィジェット iOS 17 Interactive の実機挙動（D-6、Widget Extension ターゲット作成が重い）
+- NIP-17 push 通知の到達遅延（D-7）
+
+---
+
 ## 関連ドキュメント
 
 - [MINATO Agent Protocol — iOS 実装ロードマップ](./MINATO-roadmap.md)（既存機能の Phase 0-3 + Track A/B/C）
