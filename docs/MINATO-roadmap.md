@@ -186,6 +186,27 @@
 
 > 注: 実 BLE 送信と実タイマー挙動は Simulator 不可。ロジックは全て単体テスト済み。
 
+### Track E-4a: 緊急オーバーライド権限機構
+**ステータス**: 完了（2026-06-08）
+
+> 設計判断: 精密位置は **明示的な emergency override 必須**（高信頼モードだけでは解禁しない＝DV/ストーカー対策）。override は **safety.* に限定**（trust/schedule/message は昇格しない）。デフォルト期間 **6時間**（6/12/24h・手動から選択）。`TrustSettings` に同梱（Keychain 永続・Codable 後方互換）。精密位置の*生成*（CoreLocation）は E-4b。
+
+- [x] `EmergencyOverride` モデル（grantedAt/expiresAt/capabilities、`isActive`/`grants`）+ `EmergencyOverrideDuration`（6/12/24h/手動）
+- [x] `TrustSettings.emergencyOverride` 追加（後方互換 decode）+ `isCapabilityAllowed(_:now:)` で override 結線
+- [x] `SafetyLocationPolicy.allowedPrecision(for:now:)` 純関数（precise=明示override必須 / 既知=coarse / 未知=none）
+- [x] `Capability.isSafety` / `safetyCapabilities`
+- [x] `ChatViewModel`: `emergencyContacts()` / `grantEmergencyOverride(npub:duration:)` / `revokeEmergencyOverride(npub:)`（safety-only に scope）
+- [x] `EmergencyContactsSheet`（連絡先一覧 + 期間ピッカー付与 + ワンタップ revoke + 状態表示）、DisasterModeView から起動
+- [x] テスト: override 失効、duration、TrustSettings ゲーティング、後方互換 decode、SafetyLocationPolicy
+
+### Track E-4b: CoreLocation 精密位置（保留）
+- CoreLocation で coarse/precise 位置を生成（位置情報パーミッション）
+- emergency override 相手へ directed（Noise 暗号化）送信で精密位置を限定共有
+- relay node の精密位置 redaction ポリシー（設計 doc open question）
+
+### Track E-5: Nostr/Internet store-and-forward（保留）
+- 安否を offline→online で橋渡し、origin timestamp / relay metadata を保持
+
 ---
 
 ## 既知の技術的判断

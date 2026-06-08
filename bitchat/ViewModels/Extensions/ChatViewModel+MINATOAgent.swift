@@ -6,6 +6,15 @@
 //
 
 import Foundation
+import BitLogger
+
+/// A known MINATO contact eligible for an emergency override (E-4a).
+struct EmergencyContact: Identifiable {
+    let npub: String
+    let displayName: String
+    let override: EmergencyOverride?
+    var id: String { npub }
+}
 
 extension ChatViewModel {
 
@@ -69,6 +78,55 @@ extension ChatViewModel {
     /// Stop periodic re-broadcast when leaving disaster mode.
     func stopSafetyBroadcast() {
         safetyBroadcastScheduler.stop()
+    }
+
+    // MARK: - Emergency Override (E-4a)
+
+    /// Known MINATO contacts (deduped by npub) with their current override state,
+    /// for the emergency-contacts management UI.
+    func emergencyContacts() -> [EmergencyContact] {
+        var seen = Set<String>()
+        var result: [EmergencyContact] = []
+        for card in MINATOAgentStore.shared.allRemoteCards.values where !card.agentId.isEmpty {
+            guard seen.insert(card.agentId).inserted else { continue }
+            let override = MINATOAgentStore.shared.trustSettings(for: card.agentId)?.emergencyOverride
+            result.append(EmergencyContact(npub: card.agentId, displayName: card.displayName, override: override))
+        }
+        return result.sorted {
+            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+        }
+    }
+
+    /// Grant a time-boxed emergency override to a contact. Scoped to `safety.*`
+    /// capabilities only — never escalates trust / schedule / message intents.
+    func grantEmergencyOverride(
+        npub: String,
+        duration: EmergencyOverrideDuration,
+        capabilities: [Capability] = Capability.safetyCapabilities
+    ) {
+        guard !npub.isEmpty else { return }
+        var settings = MINATOAgentStore.shared.trustSettings(for: npub) ?? TrustSettings.defaultSettings()
+        let now = UInt64(Date().timeIntervalSince1970)
+        let safetyCaps = capabilities.filter { $0.isSafety }.map(\.rawValue)
+        settings.emergencyOverride = EmergencyOverride(
+            grantedAt: now,
+            expiresAt: duration.expiry(from: now),
+            capabilities: safetyCaps
+        )
+        settings.lastInteraction = now
+        MINATOAgentStore.shared.updateTrustSettings(settings, for: npub)
+        SecureLogger.info("Emergency override granted to \(npub.prefix(12)) dur=\(duration.rawValue) caps=\(safetyCaps.count)", category: .security)
+        objectWillChange.send()
+    }
+
+    /// Revoke any emergency override for a contact (one-tap, no confirmation).
+    func revokeEmergencyOverride(npub: String) {
+        guard var settings = MINATOAgentStore.shared.trustSettings(for: npub) else { return }
+        settings.emergencyOverride = nil
+        settings.lastInteraction = UInt64(Date().timeIntervalSince1970)
+        MINATOAgentStore.shared.updateTrustSettings(settings, for: npub)
+        SecureLogger.info("Emergency override revoked for \(npub.prefix(12))", category: .security)
+        objectWillChange.send()
     }
 
     // MARK: - MINATO Agent Message Delegate

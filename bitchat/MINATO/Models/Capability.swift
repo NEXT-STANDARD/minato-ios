@@ -52,6 +52,12 @@ enum Capability: String, Codable, CaseIterable {
         guard let cap = Capability(rawValue: rawValue) else { return true }
         return highRisk.contains(cap)
     }
+
+    /// Whether this is a disaster-mode safety capability (`safety.*`).
+    var isSafety: Bool { rawValue.hasPrefix("safety.") }
+
+    /// All safety capabilities (used to scope emergency overrides).
+    static let safetyCapabilities: [Capability] = Capability.allCases.filter { $0.isSafety }
 }
 
 // MARK: - Intent

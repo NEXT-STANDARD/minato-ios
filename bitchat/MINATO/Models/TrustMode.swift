@@ -48,12 +48,17 @@ struct TrustSettings: Codable, Equatable {
     let customPermissions: [String: Bool]   // Capability overrides
     let establishedAt: UInt64               // Unix timestamp
     var lastInteraction: UInt64             // Unix timestamp
+    /// E-4a: time-boxed per-contact emergency override granting scoped safety
+    /// capabilities (e.g. precise location). `nil` = none. Optional + defaulted
+    /// so existing persisted settings decode unchanged.
+    var emergencyOverride: EmergencyOverride? = nil
 
     enum CodingKeys: String, CodingKey {
         case mode
         case customPermissions = "custom_permissions"
         case establishedAt = "established_at"
         case lastInteraction = "last_interaction"
+        case emergencyOverride = "emergency_override"
     }
 
     /// Creates default trust settings for a new peer.
@@ -68,7 +73,14 @@ struct TrustSettings: Codable, Equatable {
     }
 
     /// Whether a specific capability is allowed under current trust settings.
-    func isCapabilityAllowed(_ capability: String) -> Bool {
+    func isCapabilityAllowed(
+        _ capability: String,
+        now: UInt64 = UInt64(Date().timeIntervalSince1970)
+    ) -> Bool {
+        // An active emergency override grants its scoped safety capabilities.
+        if let emergencyOverride, emergencyOverride.grants(capability, now: now) {
+            return true
+        }
         // Custom override takes precedence
         if let override = customPermissions[capability] {
             return override
