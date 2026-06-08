@@ -96,4 +96,40 @@ struct SafetyCheckinStoreTests {
         store.clear()
         #expect(store.received.isEmpty)
     }
+
+    // MARK: - E-5: Nostr delivery
+
+    @Test("records a Nostr-delivered check-in with .nostr and relaySeenAt")
+    func recordsNostr() {
+        let clock = TestClock(1000)
+        let store = SafetyCheckinStore(clock: { clock.now })
+        store.record(makeCheckin(id: "a", expiresAt: 2000), deliveredVia: .nostr, hops: 0, receivedAt: 1000, relaySeenAt: 1500)
+        #expect(store.received.first?.deliveredVia == .nostr)
+        let relayOK = store.received.first?.relaySeenAt == 1500   // precompute (CI SILGen)
+        #expect(relayOK)
+    }
+
+    @Test("mesh delivery leaves relaySeenAt nil")
+    func meshRelaySeenAtNil() {
+        let clock = TestClock(1000)
+        let store = SafetyCheckinStore(clock: { clock.now })
+        store.record(makeCheckin(id: "a", expiresAt: 2000), deliveredVia: .mesh, hops: 1, receivedAt: 1000)
+        let isNil = store.received.first?.relaySeenAt == nil
+        #expect(isNil)
+    }
+
+    @Test("cross-transport dedup: mesh then Nostr keeps one entry, latest wins, origin preserved")
+    func crossTransportDedup() {
+        let clock = TestClock(1000)
+        let store = SafetyCheckinStore(clock: { clock.now })
+        store.record(makeCheckin(id: "a", expiresAt: 2000), deliveredVia: .mesh, hops: 2, receivedAt: 1000)
+        store.record(makeCheckin(id: "a", expiresAt: 2000), deliveredVia: .nostr, hops: 0, receivedAt: 1100, relaySeenAt: 1100)
+
+        #expect(store.received.count == 1)
+        #expect(store.received.first?.deliveredVia == .nostr)
+        let relaySet = store.received.first?.relaySeenAt == 1100
+        #expect(relaySet)
+        let expiresPreserved = store.received.first?.checkin.expiresAt == 2000   // origin timestamp intact
+        #expect(expiresPreserved)
+    }
 }

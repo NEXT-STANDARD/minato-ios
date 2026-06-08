@@ -204,8 +204,18 @@
 - emergency override 相手へ directed（Noise 暗号化）送信で精密位置を限定共有
 - relay node の精密位置 redaction ポリシー（設計 doc open question）
 
-### Track E-5: Nostr/Internet store-and-forward（保留）
-- 安否を offline→online で橋渡し、origin timestamp / relay metadata を保持
+### Track E-5: Nostr/Internet store-and-forward
+**ステータス**: 完了（2026-06-08）
+
+> 設計判断: 公開 geohash（kind 20001）は CoreLocation 必須のため対象外。**directed NIP-17 gift-wrap（位置不要・暗号化・store-and-forward）** に限定。送信先は **緊急オーバーライド連絡先のみ**（同意ベース・relay 露出最小）。トリガは **mesh と併用（常時）**。署名済み envelope をそのまま載せるため **起源タイムスタンプ（reported_at/expires_at）は自動保持**。実 relay 送受信は実機必須。
+
+- [x] 送信: `broadcastSafetyCheckin` を dual-path 化（mesh broadcast + Nostr directed）。`broadcastSafetyCheckinViaNostr` が緊急オーバーライド連絡先（npub 既知）へ AgentCard 同梱で gift-wrap 送信（既存 `sendMINATOViaNostr` 流用）
+- [x] 受信: `handleMINATOViaNostr` で safety.checkin を検出 → **TOFU 検証** → `SafetyCheckinStore` に `deliveredVia=.nostr` で記録（chat/AI返信から分離）
+- [x] `SafetyCheckinStore` に `relaySeenAt` 追加（Nostr 監査用、署名済み起源 timestamp とは分離）
+- [x] transport 跨ぎ dedupe（mesh→Nostr は id で重複排除、最新 delivery 優先、起源 timestamp 不変）
+- [x] テスト: `.nostr` 記録 / relaySeenAt / mesh は nil / cross-transport dedupe + 起源保持
+
+> 注: 実 Nostr relay 送受信は Simulator 不可。ロジック（dedupe/relaySeenAt/起源保持）は単体テスト済み。geohash 公開（kind 20001）は CoreLocation 後に別途。
 
 ---
 
