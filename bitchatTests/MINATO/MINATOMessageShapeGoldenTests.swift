@@ -12,7 +12,9 @@ struct MINATOMessageShapeGoldenTests {
         "agent_ack.json": MINATOMessageType.agentAck.description,
         "agent_revoke.json": MINATOMessageType.agentRevoke.description,
         "agent_ping.json": MINATOMessageType.agentPing.description,
-        "agent_log.json": MINATOMessageType.agentLog.description
+        "agent_log.json": MINATOMessageType.agentLog.description,
+        // Safety check-in rides on AGENT_MESSAGE (intent=safety.checkin); see E-2.
+        "safety_checkin.json": MINATOMessageType.agentMessage.description
     ]
 
     @Test("docs examples decode and re-encode without canonical diffs")

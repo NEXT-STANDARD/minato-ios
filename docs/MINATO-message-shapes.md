@@ -104,6 +104,13 @@ Current iOS enum values:
 | `trust.downgrade` | Trust mode downgrade |
 | `connection.establish` | Agent Card handshake |
 | `connection.terminate` | Revoke/disconnect |
+| `safety.checkin` | Disaster mode: unsolicited safety check-in (iOS-derived) |
+| `safety.request_help` | Disaster mode: request help (iOS-derived) |
+| `safety.resource_offer` | Disaster mode: offer resources (iOS-derived) |
+| `safety.resource_request` | Disaster mode: request resources (iOS-derived) |
+| `safety.location_share` | Disaster mode: share location (iOS-derived) |
+| `safety.evacuation_notice` | Disaster mode: evacuation notice (iOS-derived) |
+| `safety.person_search` | Disaster mode: search for a person (iOS-derived) |
 
 ### Proposed Event
 
@@ -406,6 +413,60 @@ Receive behavior:
 - Deduplicates by `log_id`.
 - Persists newest-first, capped at 200 entries.
 
+### Safety Check-in (iOS-derived, rides on `0x31` `AGENT_MESSAGE`)
+
+Purpose: disaster-mode safety status broadcast. Trialed as an iOS-derived shape on the existing `AGENT_MESSAGE` type rather than a new wire type — the structured data is carried under `payload.context`.
+
+- `payload.intent` = `safety.checkin`
+- `payload.content` = human-readable status line (e.g. `無事です。…`)
+- `payload.context.safety_checkin` = the encoded check-in object
+
+Check-in object (`safety_checkin`):
+
+```json
+{
+  "id": "safety-checkin-001",
+  "status": "needs_help",
+  "content": "助けが必要です。近くの人に知らせてください。",
+  "battery": {
+    "level": 0.18,
+    "state": "unplugged",
+    "low_power_mode": true,
+    "reported_at": 1712800200,
+    "contact_window": "medium"
+  },
+  "location": {
+    "precision": "coarse",
+    "geohash": "xn76u",
+    "label": "渋谷区周辺"
+  },
+  "relay": {
+    "delivery": "mesh",
+    "direct": false,
+    "hops": 2,
+    "last_seen_at": 1712800200,
+    "relay_seen_at": 1712800260
+  },
+  "needs": ["water", "medical", "charging"],
+  "expires_at": 1712803800
+}
+```
+
+| Field | Type | Required | Notes |
+|---|---|---:|---|
+| `id` | string | yes | Unique check-in id |
+| `status` | string | yes | `safe` / `injured` / `needs_help` / `evacuating` / `searching` / `unknown` |
+| `content` | string | yes | Human-readable status line |
+| `battery` | object | yes | `level` (0–1, nullable), `state`, `low_power_mode`, `reported_at`, `contact_window` (`short`/`medium`/`long`/`unknown`) |
+| `location` | object | yes | `precision` (`none`/`coarse`/`precise`); `geohash`/`latitude`/`longitude`/`label` optional. Coarse by default; precise is high-risk |
+| `relay` | object | yes | `delivery` (`direct`/`mesh`/`nostr`/`unknown`), `direct`, `hops?`, `last_seen_at`, `relay_seen_at?` |
+| `needs` | array | yes | Subset of `water`/`food`/`medical`/`charging`/`shelter`/`transport`/`rescue` |
+| `expires_at` | number | yes | Unix expiry (default +1h) |
+
+Canonical example: `docs/examples/minato-ios/safety_checkin.json`.
+
+Status (E-2): models + envelope encode/decode + golden example. BLE mesh send, TTL/dedupe, and battery-aware throttling are E-3.
+
 ---
 
 ## Capability Values
@@ -423,6 +484,12 @@ Current iOS enum values:
 | `language.translate` | Default |
 | `location.area` |  |
 | `location.precise` | High-risk |
+| `safety.status.write` | Disaster mode (iOS-derived) |
+| `safety.location.coarse` | Disaster mode (iOS-derived) |
+| `safety.location.precise` | Disaster mode, High-risk (iOS-derived) |
+| `safety.relay` | Disaster mode (iOS-derived) |
+| `safety.broadcast` | Disaster mode (iOS-derived) |
+| `safety.person_search` | Disaster mode (iOS-derived) |
 
 Unknown capabilities are treated as high-risk by `Capability.isHighRisk(_:)`.
 
@@ -450,6 +517,7 @@ These fields/shapes are implemented in iOS and may be proposed upstream separate
 | `AGENT_REVOKE` payload | `scope`, `reason` | Separates trust revocation from card cache removal |
 | `AGENT_LOG` payload | `log_id`, `action`, `trust_mode` | Enables idempotent post-hoc audit notifications |
 | `AGENT_PING` current semantics | no-op heartbeat | Reserves the type without pretending latency/pong behavior exists |
+| Disaster-mode safety check-in | `AGENT_MESSAGE` + `intent=safety.checkin` + `context.safety_checkin` | Trials safety broadcast without a new wire type; data isolated under `payload.context` |
 
 ---
 
