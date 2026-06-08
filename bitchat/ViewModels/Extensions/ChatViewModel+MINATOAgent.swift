@@ -64,9 +64,51 @@ extension ChatViewModel {
 
     // MARK: - Disaster Mode (E-3a)
 
-    /// Broadcasts the given safety check-in to the mesh, if BLE is available.
+    /// Broadcasts the given safety check-in. Dual-path (E-5): always BLE mesh
+    /// broadcast (coarse, to everyone nearby) plus directed Nostr gift-wrap to
+    /// emergency-override contacts (store-and-forward, reaches them offline /
+    /// out of mesh range).
     func broadcastSafetyCheckin(_ checkin: SafetyCheckin) {
         (meshService as? BLEService)?.sendSafetyCheckin(checkin)
+        broadcastSafetyCheckinViaNostr(checkin)
+    }
+
+    /// Sends the check-in over Nostr (NIP-17 gift-wrap) to each emergency-override
+    /// contact with a known npub. Embeds the local Agent Card so the recipient can
+    /// verify it via TOFU even without a prior handshake.
+    func broadcastSafetyCheckinViaNostr(_ checkin: SafetyCheckin) {
+        let recipients = emergencyOverridePeerIDs()
+        guard !recipients.isEmpty,
+              let localCard = MINATOAgentStore.shared.localCard,
+              let contextValue = try? checkin.asContextValue() else { return }
+        let payloadContent = PayloadContent(
+            intent: Intent.safetyCheckin.rawValue,
+            content: checkin.content,
+            originalLanguage: localCard.ownerLocale,
+            translatedContent: nil,
+            status: nil, requestId: nil, action: nil,
+            context: [MINATOPayload.safetyCheckinContextKey: contextValue],
+            proposedEvent: nil,
+            agentCard: localCard
+        )
+        for peerID in recipients {
+            sendMINATOViaNostr(type: .agentMessage, payload: payloadContent, to: peerID)
+        }
+    }
+
+    /// PeerIDs of known contacts that currently have an active emergency override.
+    private func emergencyOverridePeerIDs() -> [PeerID] {
+        let now = UInt64(Date().timeIntervalSince1970)
+        var result: [PeerID] = []
+        var seen = Set<String>()
+        for (hexKey, card) in MINATOAgentStore.shared.allRemoteCards where !card.agentId.isEmpty {
+            guard seen.insert(card.agentId).inserted else { continue }
+            if let override = MINATOAgentStore.shared.trustSettings(for: card.agentId)?.emergencyOverride,
+               override.isActive(now: now) {
+                result.append(PeerID(str: hexKey))
+            }
+        }
+        return result
     }
 
     /// Begin battery-throttled periodic re-broadcast (E-3b). Call on activation,

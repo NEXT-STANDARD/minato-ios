@@ -21,6 +21,10 @@ final class SafetyCheckinStore: ObservableObject {
         let deliveredVia: SafetyRelayDelivery
         let hops: Int
         let receivedAt: UInt64
+        /// Transport-observed timestamp (E-5): for `.nostr`, the relay/rumor
+        /// time the gift-wrap was seen. Separate from the signed origin
+        /// timestamps inside `checkin` (which stay authoritative). `nil` for mesh.
+        let relaySeenAt: UInt64?
 
         var id: String { checkin.id }
     }
@@ -37,7 +41,13 @@ final class SafetyCheckinStore: ObservableObject {
 
     /// Record a received check-in. Drops it if already expired, dedupes by id
     /// (keeping the latest), prunes other expired entries, and caps the list.
-    func record(_ checkin: SafetyCheckin, deliveredVia: SafetyRelayDelivery, hops: Int, receivedAt: UInt64) {
+    func record(
+        _ checkin: SafetyCheckin,
+        deliveredVia: SafetyRelayDelivery,
+        hops: Int,
+        receivedAt: UInt64,
+        relaySeenAt: UInt64? = nil
+    ) {
         let now = UInt64(clock().timeIntervalSince1970)
         guard checkin.expiresAt > now else { return }
 
@@ -46,7 +56,8 @@ final class SafetyCheckinStore: ObservableObject {
             checkin: checkin,
             deliveredVia: deliveredVia,
             hops: max(0, hops),
-            receivedAt: receivedAt
+            receivedAt: receivedAt,
+            relaySeenAt: relaySeenAt
         )
         if let idx = list.firstIndex(where: { $0.id == checkin.id }) {
             list[idx] = entry

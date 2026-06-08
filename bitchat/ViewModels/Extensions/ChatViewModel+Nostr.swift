@@ -866,10 +866,40 @@ extension ChatViewModel {
 
     // MARK: - MINATO via Nostr
 
+    /// Records a safety check-in delivered via Nostr (E-5). Verifies the
+    /// self-attested envelope (TOFU) before storing, preserving the signed origin
+    /// timestamps and marking delivery as `.nostr`.
+    @MainActor
+    private func recordSafetyCheckinFromNostr(_ payload: MINATOPayload, relaySeenAt: UInt64) {
+        // Cross-check identity against any cached card for this agent.
+        let cachedKey = MINATOAgentStore.shared.allRemoteCards.values
+            .first(where: { $0.agentId == payload.from })?.ed25519PubKey
+        guard payload.verifiedSafetyCard(cachedKey: cachedKey) != nil else {
+            SecureLogger.warning("safety.checkin via Nostr: TOFU verification failed, dropping", category: .security)
+            return
+        }
+        guard let checkin = try? payload.decodedSafetyCheckin() else { return }
+        SafetyCheckinStore.shared.record(
+            checkin,
+            deliveredVia: .nostr,
+            hops: 0,
+            receivedAt: UInt64(Date().timeIntervalSince1970),
+            relaySeenAt: relaySeenAt
+        )
+        SecureLogger.info("Recorded safety.checkin via Nostr id=\(checkin.id.prefix(8))", category: .session)
+    }
+
     @MainActor
     private func handleMINATOViaNostr(_ packet: BitchatPacket, senderPubkey: String, convKey: PeerID, timestamp: Date) {
         guard let minatoPayload = try? JSONDecoder().decode(MINATOPayload.self, from: packet.payload) else {
             SecureLogger.warning("Failed to decode MINATO payload from Nostr", category: .session)
+            return
+        }
+
+        // Safety check-ins (E-5): verify (self-attested TOFU) and store for
+        // disaster mode — never shown in chat or auto-replied to.
+        if minatoPayload.isSafetyCheckin {
+            recordSafetyCheckinFromNostr(minatoPayload, relaySeenAt: UInt64(timestamp.timeIntervalSince1970))
             return
         }
 
