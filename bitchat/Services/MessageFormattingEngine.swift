@@ -112,7 +112,7 @@ final class MessageFormattingEngine {
         }
 
         var result = AttributedString()
-        let baseColor: Color = isSelf ? .orange : context.senderColor(for: message, isDark: isDark)
+        let baseColor: Color = isSelf ? MinatoTheme.selfMark : context.senderColor(for: message, isDark: isDark)
 
         // Format system messages differently
         if message.sender == "system" {
@@ -154,7 +154,7 @@ final class MessageFormattingEngine {
     ) -> AttributedString {
         let isDark = colorScheme == .dark
         let isSelf = context.isSelfMessage(message)
-        let baseColor: Color = isSelf ? .orange : context.senderColor(for: message, isDark: isDark)
+        let baseColor: Color = isSelf ? MinatoTheme.selfMark : context.senderColor(for: message, isDark: isDark)
 
         if message.sender == "system" {
             var style = AttributeContainer()

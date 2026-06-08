@@ -2167,7 +2167,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
         // Not cached, format the message
         var result = AttributedString()
         
-        let baseColor: Color = isSelf ? .orange : peerColor(for: message, isDark: isDark)
+        let baseColor: Color = isSelf ? MinatoTheme.selfMark : peerColor(for: message, isDark: isDark)
         
         if message.sender != "system" {
             // Sender (at the beginning) with light-gray suffix styling if present
@@ -2341,7 +2341,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
                         }()
                         var mentionStyle = AttributeContainer()
                         mentionStyle.font = .bitchatSystem(size: 14, weight: isSelf ? .bold : .semibold, design: .monospaced)
-                        let mentionColor: Color = isMentionToMe ? .orange : baseColor
+                        let mentionColor: Color = isMentionToMe ? MinatoTheme.selfMark : baseColor
                         mentionStyle.foregroundColor = mentionColor
                         // Emit '@' (non-localizable symbol - use interpolation to avoid extraction)
                         let at = "@"
@@ -2415,7 +2415,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
                             var matchStyle = AttributeContainer()
                             matchStyle.font = .bitchatSystem(size: 14, weight: isSelf ? .bold : .semibold, design: .monospaced)
                             if type == "url" {
-                                matchStyle.foregroundColor = isSelf ? .orange : .blue
+                                matchStyle.foregroundColor = isSelf ? MinatoTheme.selfMark : .blue
                                 matchStyle.underlineStyle = .single
                                 if let url = URL(string: matchText) {
                                     matchStyle.link = url
@@ -2491,7 +2491,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
         }()
 
         let isDark = colorScheme == .dark
-        let baseColor: Color = isSelf ? .orange : peerColor(for: message, isDark: isDark)
+        let baseColor: Color = isSelf ? MinatoTheme.selfMark : peerColor(for: message, isDark: isDark)
 
         if message.sender == "system" {
             var style = AttributeContainer()
@@ -2715,7 +2715,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
     @MainActor
     private func getPeerPaletteColor(for peerID: PeerID, isDark: Bool) -> Color {
         if peerID == meshService.myPeerID {
-            return .orange
+            return MinatoTheme.selfMark
         }
 
         meshPalette.ensurePalette(for: currentMeshPaletteSeeds())
@@ -2739,7 +2739,7 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
     private func getNostrPaletteColor(for pubkeyHexLowercased: String, isDark: Bool) -> Color {
         let myHex = currentGeohashIdentityHex()
         if let myHex, pubkeyHexLowercased == myHex {
-            return .orange
+            return MinatoTheme.selfMark
         }
 
         nostrPalette.ensurePalette(for: currentNostrPaletteSeeds(excluding: myHex))

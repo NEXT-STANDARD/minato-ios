@@ -69,16 +69,28 @@ merge, re-check / re-apply:
     VerificationViews, MINATOOnboardingSheet) read `@Environment(\.minatoAlert)`
     so they flip too; `DisasterModeView` reads `store.isActive` directly.
   - VoiceOver: an `.announcement` fires on activation (iOS).
+- **A4 — categorical tokens (done)** — the raw `.purple` / `.orange` / `.yellow`
+  chrome literals that A2 deliberately deferred are now single-sourced tokens:
+  - `MinatoTheme.nostr` (violet) — Nostr / internet-relay reachability (the
+    `globe` peer indicators in ContentView + MeshPeerList).
+  - `MinatoTheme.selfMark` (warm orange) — "you" identity highlight: own nickname,
+    self mentions, self rows/suffixes in peer & people lists, self message styling
+    (ContentView, MeshPeerList, GeohashPeopleList, ChatViewModel, MessageFormattingEngine).
+  - `MinatoTheme.favorite` (gold) — favorite/starred peer star (ContentView, MeshPeerList).
+  - Reclassified along the way: the **agent activity-log count badge** purple was
+    *not* Nostr → mapped to `accent` (MINATO agent chrome); the onboarding **Tips**
+    lightbulb `.yellow` → `beacon`.
 
-### Intentionally NOT migrated (categorical, not the inherited theme)
+### Intentionally NOT migrated
 
-These carry meaning the current `MinatoTheme` has no token for; left raw on
-purpose (a future "categorical tokens" pass could add `MinatoTheme.nostr` /
-`selfMark`):
-
-- **`.purple` = Nostr / internet-relay reachability** (globe indicators,
-  activity-log count badge). Distinguishes internet transport from local mesh.
-- **`.orange` = "you" (self) identity highlight** (own nickname / suffix).
+- **Message-markup palette** — in-message entity styling in
+  `MessageFormattingEngine` is its own self-contained palette and is left raw:
+  `hashtag = .purple`, `url = .blue`, `cashu = .green`, `lightning/bolt11/lnurl =
+  .yellow`. Changing these risks chat readability/recognizability; tokenize as a
+  separate `markup.*` set if ever needed.
+- **Scattered blues** — mesh-channel subtitle, "delivered" status, waveform
+  playback, photo-viewer button. Too inconsistent to be one category; leave until
+  a clear semantic emerges.
 - **Media chrome** — full-screen photo backdrops, scrim overlays, and shadows in
   `ImagePreviewView` / `BlockRevealImageView` / `VoiceNoteView` use literal
   `Color.black`/`Color.white` by design (not theme surfaces).
@@ -92,5 +104,3 @@ purpose (a future "categorical tokens" pass could add `MinatoTheme.nostr` /
   avoid upstream asset conflicts.
 - **Localizable.xcstrings** — consider a MINATO sidecar `MINATO.xcstrings` for
   MINATO-specific strings to keep upstream-merge diffs small.
-- **Categorical color tokens** — add `MinatoTheme.nostr` / `selfMark` so the
-  purple (Nostr) and orange (self) indicators above can be themed too.

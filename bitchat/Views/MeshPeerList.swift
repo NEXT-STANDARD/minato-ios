@@ -49,7 +49,7 @@ struct MeshPeerList: View {
                     let isMe = item.isMe
                     HStack(spacing: 4) {
                         let assigned = viewModel.colorForMeshPeer(id: peer.peerID, isDark: colorScheme == .dark)
-                        let baseColor = isMe ? Color.orange : assigned
+                        let baseColor = isMe ? MinatoTheme.selfMark : assigned
                         if isMe {
                             Image(systemName: "person.fill")
                                 .font(.bitchatSystem(size: 10))
@@ -65,10 +65,10 @@ struct MeshPeerList: View {
                                 .font(.bitchatSystem(size: 10))
                                 .foregroundColor(baseColor)
                         } else if peer.isMutualFavorite {
-                            // Mutual favorite reachable via Nostr: globe icon (purple)
+                            // Mutual favorite reachable via Nostr: globe icon
                             Image(systemName: "globe")
                                 .font(.bitchatSystem(size: 10))
-                                .foregroundColor(.purple)
+                                .foregroundColor(MinatoTheme.nostr)
                         } else {
                             // Fallback icon for others (dimmed)
                             Image(systemName: "person")
@@ -83,7 +83,7 @@ struct MeshPeerList: View {
                                 .font(.bitchatSystem(size: 14, design: .monospaced))
                                 .foregroundColor(baseColor)
                             if !suffix.isEmpty {
-                                let suffixColor = isMe ? Color.orange.opacity(0.6) : baseColor.opacity(0.6)
+                                let suffixColor = isMe ? MinatoTheme.selfMark.opacity(0.6) : baseColor.opacity(0.6)
                                 Text(suffix)
                                     .font(.bitchatSystem(size: 14, design: .monospaced))
                                     .foregroundColor(suffixColor)
@@ -151,7 +151,7 @@ struct MeshPeerList: View {
                             Button(action: { onToggleFavorite(peer.peerID) }) {
                                 Image(systemName: (peer.favoriteStatus?.isFavorite ?? false) ? "star.fill" : "star")
                                     .font(.bitchatSystem(size: 12))
-                                    .foregroundColor((peer.favoriteStatus?.isFavorite ?? false) ? .yellow : secondaryTextColor)
+                                    .foregroundColor((peer.favoriteStatus?.isFavorite ?? false) ? MinatoTheme.favorite : secondaryTextColor)
                             }
                             .buttonStyle(.plain)
                         }

@@ -633,7 +633,7 @@ struct ContentView: View {
                             }) {
                                 Image(systemName: isFavorite ? "star.fill" : "star")
                                     .font(.bitchatSystem(size: 14))
-                                    .foregroundColor(isFavorite ? Color.yellow : textColor)
+                                    .foregroundColor(isFavorite ? MinatoTheme.favorite : textColor)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(
@@ -659,10 +659,10 @@ struct ContentView: View {
                                         Text("\(logCount)")
                                             .font(.bitchatSystem(size: 10, weight: .semibold, design: .monospaced))
                                     }
-                                    .foregroundColor(.purple)
+                                    .foregroundColor(MinatoTheme.accent)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 3)
-                                    .background(Color.purple.opacity(0.12))
+                                    .background(MinatoTheme.accent.opacity(0.12))
                                     .cornerRadius(8)
                                 }
                                 .buttonStyle(.plain)
@@ -763,7 +763,7 @@ struct ContentView: View {
                     case .nostrAvailable:
                         Image(systemName: "globe")
                             .font(.bitchatSystem(size: 14))
-                            .foregroundColor(.purple)
+                            .foregroundColor(MinatoTheme.nostr)
                             .accessibilityLabel(String(localized: "content.accessibility.available_nostr", comment: "Accessibility label for Nostr-available peer indicator"))
                     case .offline:
                         EmptyView()
@@ -776,7 +776,7 @@ struct ContentView: View {
                 } else if context.isNostrAvailable {
                     Image(systemName: "globe")
                         .font(.bitchatSystem(size: 14))
-                        .foregroundColor(.purple)
+                        .foregroundColor(MinatoTheme.nostr)
                         .accessibilityLabel(String(localized: "content.accessibility.available_nostr", comment: "Accessibility label for Nostr-available peer indicator"))
                 } else if viewModel.meshService.isPeerConnected(context.headerPeerID) || viewModel.connectedPeers.contains(context.headerPeerID) {
                     Image(systemName: "dot.radiowaves.left.and.right")
