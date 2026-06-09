@@ -69,6 +69,8 @@ struct ContentView: View {
     @ObservedObject private var safetyStore = SafetyModeStore.shared
     @State private var showSafetyActivateConfirm = false
     @State private var showSafetyDashboard = false
+    @ObservedObject private var contactRequests = ContactRequestStore.shared
+    @State private var showContactRequests = false
     @State private var onboardingPeerName: String = ""
 #if os(iOS)
     @State private var showImagePicker = false
@@ -136,6 +138,34 @@ struct ContentView: View {
         let isNostrAvailable: Bool
     }
 
+    /// Tappable banner shown when one or more incoming contact requests are pending.
+    private var contactRequestsBanner: some View {
+        Button {
+            showContactRequests = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .foregroundColor(MinatoTheme.accent)
+                Text(String(
+                    format: String(localized: "contact.requests.banner",
+                                   defaultValue: "コンタクトリクエストが %d 件"),
+                    contactRequests.requests.count
+                ))
+                .font(.bitchatSystem(size: 13, weight: .semibold, design: .monospaced))
+                .foregroundColor(textColor)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(secondaryTextColor)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(MinatoTheme.accent.opacity(0.08))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("contact.requests.banner_a11y", comment: "Accessibility label for the contact-requests banner"))
+    }
+
 // MARK: - Body
 
     var body: some View {
@@ -145,6 +175,10 @@ struct ContentView: View {
                 onRequestActivate: { showSafetyActivateConfirm = true },
                 onOpenDashboard: { showSafetyDashboard = true }
             )
+
+            if !contactRequests.requests.isEmpty {
+                contactRequestsBanner
+            }
 
             mainHeaderView
                 .onAppear {
@@ -1261,6 +1295,10 @@ struct ContentView: View {
                 format: String(localized: "contact.invite.add_message", defaultValue: "%1$@（%2$@）を連絡先に追加してつながりますか？"),
                 invite.displayName, invite.npubShort
             ))
+        }
+        .sheet(isPresented: $showContactRequests) {
+            ContactRequestsView(onClose: { showContactRequests = false })
+                .environmentObject(viewModel)
         }
         .background(backgroundColor.opacity(0.95))
         // Outermost so the high-alert frame draws over the whole window AND

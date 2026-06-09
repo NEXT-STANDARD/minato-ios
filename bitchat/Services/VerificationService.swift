@@ -141,6 +141,24 @@ final class VerificationService {
         return noise.verifySignature(sig, for: qr.canonicalBytes(), publicKey: signKey) ? qr : nil
     }
 
+    /// Extract and verify the first contact-invite link (`minato://add` /
+    /// `bitchat://add`) embedded in free text (e.g. an incoming "hello" DM).
+    /// Returns the verified bundle or nil if no valid invite is present.
+    func extractInvite(fromText text: String) -> VerificationQR? {
+        // Bound the scan to defend against pathological/huge DMs (one invite is tiny).
+        let scanned = text.count > 8192 ? String(text.prefix(8192)) : text
+        for scheme in MinatoBrand.acceptedURLSchemes {
+            let marker = "\(scheme)://\(VerificationQR.inviteHost)"
+            guard let start = scanned.range(of: marker) else { continue }
+            // The link runs to the next whitespace/newline (query is percent-safe).
+            let tail = scanned[start.lowerBound...]
+            let end = tail.firstIndex(where: { $0 == " " || $0 == "\n" || $0 == "\t" || $0 == "\r" }) ?? tail.endIndex
+            let candidate = String(tail[tail.startIndex..<end])
+            if let qr = verifyInvite(candidate) { return qr }
+        }
+        return nil
+    }
+
     /// Verify a scanned QR and return the parsed payload if valid (signature + freshness checks)
     func verifyScannedQR(_ urlString: String, maxAge: TimeInterval = TransportConfig.verificationQRMaxAgeSeconds) -> VerificationQR? {
         guard let url = URL(string: urlString), let qr = VerificationQR.fromURL(url) else { return nil }

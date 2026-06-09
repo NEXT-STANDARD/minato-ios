@@ -64,6 +64,59 @@ extension ChatViewModel {
         pendingContactInvite = nil
     }
 
+    // MARK: - Incoming contact requests (inviter side / PR2)
+
+    /// Approve a quarantined incoming request: add the sender as a contact, mark the
+    /// relationship mutual (the request itself proves they favorited us), tell them
+    /// we favorited them back (so their side becomes mutual too), and open the chat.
+    func acceptContactRequest(_ request: ContactRequest) {
+        let qr = request.invite
+        ContactRequestStore.shared.remove(id: request.id)
+        guard let noiseKey = Data(hexString: qr.noiseKeyHex) else {
+            SecureLogger.warning("Contact request: malformed Noise key, ignoring", category: .security)
+            return
+        }
+        let safeNick = InputValidator.validateNickname(qr.nickname)
+            ?? String(localized: "contact.invite.unknown_name", defaultValue: "名称未設定")
+
+        FavoritesPersistenceService.shared.addFavorite(
+            peerNoisePublicKey: noiseKey,
+            peerNostrPublicKey: qr.npub,
+            peerNickname: safeNick
+        )
+        // The request is proof they favorited us — record it so we're mutual.
+        FavoritesPersistenceService.shared.updatePeerFavoritedUs(
+            peerNoisePublicKey: noiseKey,
+            favorited: true,
+            peerNickname: safeNick,
+            peerNostrPublicKey: qr.npub
+        )
+        // Tell them we favorited them back so their side also becomes mutual.
+        sendFavoriteNotificationViaNostr(noisePublicKey: noiseKey, isFavorite: true)
+
+        // Don't open the chat here: that would present a second sheet over the
+        // requests inbox. The contact is now a mutual favorite and appears in the
+        // people list; the original hello DM was only an invite carrier, so dropping
+        // it (the gate returned before storing it) is intentional.
+        objectWillChange.send()
+    }
+
+    /// True when the invite's npub matches the Nostr pubkey (hex) the request
+    /// actually arrived from — a sender can only assert their own identity.
+    nonisolated static func inviteNpub(_ invite: VerificationService.VerificationQR, matchesSenderHex senderHex: String) -> Bool {
+        guard let npub = invite.npub,
+              let decoded = try? Bech32.decode(npub) else { return false }
+        return decoded.data.hexEncodedString().lowercased() == senderHex.lowercased()
+    }
+
+    /// Reject a quarantined request: drop it and block the sender so they can't
+    /// re-request or otherwise reach us (reversible via unblock).
+    func declineContactRequest(_ request: ContactRequest) {
+        ContactRequestStore.shared.remove(id: request.id)
+        identityManager.setNostrBlocked(request.senderPubkeyHex.lowercased(), isBlocked: true)
+        SecureLogger.info("Declined + blocked contact request from \(request.senderPubkeyHex.prefix(8))…", category: .session)
+    }
+
     // MARK: - Private
 
     private func myNpub() -> String? {
