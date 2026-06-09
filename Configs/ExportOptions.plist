@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Store / TestFlight export options for `xcodebuild -exportArchive`.
+	     `destination=export` produces a .ipa you then upload (Transporter or
+	     `xcrun altool`); switch to `upload` to send straight to App Store Connect
+	     (requires an ASC API key via -authentication* flags). signingStyle is
+	     automatic — the team/profile come from the archive (Local.xcconfig sets
+	     DEVELOPMENT_TEAM); add a <key>teamID</key> here if export can't infer it. -->
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>export</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>generateAppStoreInformation</key>
+	<true/>
+</dict>
+</plist>
