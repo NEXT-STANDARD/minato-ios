@@ -74,4 +74,36 @@ struct ContactInviteTests {
         let rejected = parsed == nil
         #expect(rejected)
     }
+
+    // MARK: - npub/sender binding (anti-impersonation gate, PR2)
+
+    private func invite(npub: String?) -> VerificationService.VerificationQR {
+        VerificationService.VerificationQR(
+            v: 1, noiseKeyHex: "aa", signKeyHex: "bb", npub: npub,
+            nickname: "x", ts: 1, nonceB64: "y", sigHex: "cc"
+        )
+    }
+
+    @Test("invite npub matches the sender hex it was derived from")
+    func npubMatchesSender() throws {
+        let hex = "1122334455667788990011223344556677889900112233445566778899001122"
+        let npub = try Bech32.encode(hrp: "npub", data: try #require(Data(hexString: hex)))
+        #expect(ChatViewModel.inviteNpub(invite(npub: npub), matchesSenderHex: hex))
+        #expect(ChatViewModel.inviteNpub(invite(npub: npub), matchesSenderHex: hex.uppercased()))
+    }
+
+    @Test("invite npub does NOT match a different sender (forged third-party identity)")
+    func npubMismatchRejected() throws {
+        let hex = "1122334455667788990011223344556677889900112233445566778899001122"
+        let other = "9988776655443322110099887766554433221100998877665544332211009988"
+        let npub = try Bech32.encode(hrp: "npub", data: try #require(Data(hexString: hex)))
+        let mismatched = ChatViewModel.inviteNpub(invite(npub: npub), matchesSenderHex: other) == false
+        #expect(mismatched)
+    }
+
+    @Test("invite without npub never matches a sender")
+    func nilNpubRejected() {
+        let none = ChatViewModel.inviteNpub(invite(npub: nil), matchesSenderHex: "aabb") == false
+        #expect(none)
+    }
 }

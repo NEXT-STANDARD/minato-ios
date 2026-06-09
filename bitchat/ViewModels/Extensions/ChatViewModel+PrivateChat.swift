@@ -243,7 +243,22 @@ extension ChatViewModel {
                 return
             }
         }
-        
+
+        // Contact-request gate (approval-gated invites): a DM bearing a verifiable
+        // contact invite from someone who is NOT yet a contact is quarantined as a
+        // request instead of appearing as a chat. Normal / geohash DMs flow through.
+        // The invite's npub MUST match the actual Nostr sender — a sender can only
+        // assert their own identity, which blocks forging a request for a third party.
+        if findNoiseKey(for: senderPubkey) == nil,
+           let invite = VerificationService.shared.extractInvite(fromText: pm.content),
+           Self.inviteNpub(invite, matchesSenderHex: senderPubkey) {
+            ContactRequestStore.shared.add(
+                ContactRequest(invite: invite, senderPubkeyHex: senderPubkey, receivedAt: messageTimestamp)
+            )
+            SecureLogger.info("Quarantined contact request from \(senderPubkey.prefix(8))…", category: .session)
+            return
+        }
+
         let senderName = displayNameForNostrPubkey(senderPubkey)
         let msg = BitchatMessage(
             id: messageId,

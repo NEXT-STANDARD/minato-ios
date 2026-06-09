@@ -3,8 +3,8 @@
 How two people who are **not** in Bluetooth range add each other and start
 chatting over Nostr — the thing the proximity-first bitchat base could not do.
 
-Status: **Phase 1 (PR1)** — invite link + invitee-side accept. The inviter-side
-**approval gate** (auto-quarantine of incoming requests) is **Phase 2 (PR2)**.
+Status: **Phase 1 (PR1)** — invite link + invitee-side accept — **and Phase 2
+(PR2)** — inviter-side approval gate (auto-quarantine + Accept/Decline inbox).
 
 ## The invite link
 
@@ -39,9 +39,33 @@ minato://add?v=1&noise=<hex>&sign=<hex>&nick=<name>&ts=<unix>&nonce=<b64u>&sig=<
    - confirms with a system message. The chat does **not** auto-open: a one-way
      favorite is blocked from messaging until it's mutual (avoids a confusing
      "requires mutual favorite" wall). It opens automatically once mutual.
-4. **Inviter** receives the hello (a DM containing the invitee's `minato://add`
-   link). Tapping it adds the invitee back → **mutual favorite** → both can chat.
-   PR2 replaces this manual tap with a proper **request inbox** (Accept/Decline).
+4. **Inviter** receives the hello. Instead of it appearing as a chat, the
+   **approval gate** quarantines it as a **contact request** (PR2). The inviter
+   sees a banner → a request inbox → **Accept** (the sender becomes a mutual
+   favorite; we mark `theyFavoritedUs` from the request and send a `[FAVORITED]`
+   back so their side also becomes mutual) or **Decline** (drop + block).
+
+## The approval gate (PR2)
+
+In the incoming-Nostr-DM path (`handlePrivateMessage`, shared with geohash DMs),
+*after* the existing block check and dedup, a message is quarantined as a
+`ContactRequest` (held in `ContactRequestStore`, not shown as a chat) **only when
+all** hold:
+
+- the sender is **not already a contact** (`findNoiseKey == nil`), and
+- the content carries a **verifiable** `minato://add` invite
+  (`extractInvite` → self-signature + 64-hex keys; scan bounded to 8 KB), and
+- the invite's **npub matches the actual Nostr sender** — a sender can only
+  assert their own identity, so this blocks forging a request that claims a
+  **third party's** keys (the bundle's keys are self-signed but otherwise
+  unbound, so without this check an attacker could make you "mutually favorite" a
+  victim).
+
+Normal/geohash/cold DMs (no verifiable invite, or a mismatched npub) flow through
+unchanged. Declined senders are **blocked** (filtered before the gate on their
+next DM); accepted senders become favorites (no longer gated). The store is
+in-memory — gift-wrapped requests re-arrive from relays on launch, so the set
+re-derives without persistence.
 
 ## Security model
 
