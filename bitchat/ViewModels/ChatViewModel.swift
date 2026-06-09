@@ -272,6 +272,12 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
 
     @Published var pendingScheduleApprovals: [String: PendingScheduleApproval] = [:]  // requestId → approval
 
+    // MARK: - MINATO Contact Invite (minato://add)
+
+    /// A verified, not-yet-accepted incoming contact invite awaiting the owner's
+    /// confirmation. Set from a tapped `minato://add` link; drives the add prompt.
+    @Published var pendingContactInvite: PendingContactInvite?
+
     // MARK: - Autocomplete Properties
 
     @Published var autocompleteSuggestions: [String] = []

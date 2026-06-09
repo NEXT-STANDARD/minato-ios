@@ -40,12 +40,24 @@ final class VerificationService {
             return out
         }
 
-        func toURLString() -> String {
+        /// Hosts that carry this signed identity bundle. `verify` = in-person QR
+        /// (existing-peer key confirmation); `add` = shareable remote contact invite.
+        static let verifyHost = "verify"
+        static let inviteHost = "add"
+
+        /// Verification QR (camera, in-person). Emits minato://verify.
+        func toURLString() -> String { urlString(host: Self.verifyHost) }
+
+        /// Shareable contact-invite link. Emits minato://add — same signed identity
+        /// bundle, but openable remotely to add the sender as a contact.
+        func toInviteURLString() -> String { urlString(host: Self.inviteHost) }
+
+        private func urlString(host: String) -> String {
             var comps = URLComponents()
-            // Phase 2: emit the minato:// scheme for verification QR. Scanners still
-            // accept bitchat:// (fromURL is dual-scheme), so older codes keep working.
+            // Phase 2: emit the minato:// scheme. Parsers stay dual-scheme
+            // (fromURL accepts bitchat:// too), so older codes keep working.
             comps.scheme = MinatoBrand.urlScheme
-            comps.host = "verify"
+            comps.host = host
             comps.queryItems = [
                 URLQueryItem(name: "v", value: String(v)),
                 URLQueryItem(name: "noise", value: noiseKeyHex),
@@ -59,8 +71,10 @@ final class VerificationService {
         }
 
         static func fromURL(_ url: URL) -> VerificationQR? {
-            // Accept QR codes from both minato:// and bitchat:// (Phase 1 interop).
-            guard MinatoBrand.acceptsURLScheme(url.scheme), url.host == "verify",
+            // Accept both minato:// and bitchat:// (interop) and both hosts
+            // (verify QR + add invite carry the identical signed bundle).
+            guard MinatoBrand.acceptsURLScheme(url.scheme),
+                  url.host == verifyHost || url.host == inviteHost,
                   let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return nil }
             func val(_ name: String) -> String? { items.first(where: { $0.name == name })?.value }
             guard let vStr = val("v"), let v = Int(vStr),
@@ -73,12 +87,12 @@ final class VerificationService {
 
     // MARK: - Public API
 
-    /// Build a signed QR string for the current identity
-    func buildMyQRString(nickname: String, npub: String?) -> String? {
-        // Simple short-lived cache to speed up sheet opening
-        struct Cache { static var last: (nick: String, npub: String?, builtAt: Date, value: String)? }
+    /// Build and self-sign the local identity bundle (shared by QR + invite).
+    /// Cached briefly so re-renders don't re-sign (and flicker ts/nonce).
+    private func buildSignedIdentity(nickname: String, npub: String?) -> VerificationQR? {
+        struct Cache { static var last: (nick: String, npub: String?, builtAt: Date, qr: VerificationQR)? }
         if let c = Cache.last, c.nick == nickname, c.npub == npub, Date().timeIntervalSince(c.builtAt) < 60 {
-            return c.value
+            return c.qr
         }
         guard let noise = noise else { return nil }
         let noiseKey = noise.getStaticPublicKeyData().hexEncodedString()
@@ -88,8 +102,7 @@ final class VerificationService {
         _ = nonce.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 16, $0.baseAddress!) }
         let nonceB64 = nonce.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
         let payload = VerificationQR(v: 1, noiseKeyHex: noiseKey, signKeyHex: signKey, npub: npub, nickname: nickname, ts: ts, nonceB64: nonceB64, sigHex: "")
-        let msg = payload.canonicalBytes()
-        guard let sig = noise.signData(msg) else { return nil }
+        guard let sig = noise.signData(payload.canonicalBytes()) else { return nil }
         let signed = VerificationQR(v: payload.v,
                                     noiseKeyHex: payload.noiseKeyHex,
                                     signKeyHex: payload.signKeyHex,
@@ -98,9 +111,34 @@ final class VerificationService {
                                     ts: payload.ts,
                                     nonceB64: payload.nonceB64,
                                     sigHex: sig.hexEncodedString())
-        let out = signed.toURLString()
-        Cache.last = (nickname, npub, Date(), out)
-        return out
+        Cache.last = (nickname, npub, Date(), signed)
+        return signed
+    }
+
+    /// Build a signed QR string for the current identity (camera verify, minato://verify).
+    func buildMyQRString(nickname: String, npub: String?) -> String? {
+        buildSignedIdentity(nickname: nickname, npub: npub)?.toURLString()
+    }
+
+    /// Build a shareable contact-invite link for the current identity (minato://add).
+    func buildMyInviteString(nickname: String, npub: String?) -> String? {
+        buildSignedIdentity(nickname: nickname, npub: npub)?.toInviteURLString()
+    }
+
+    /// Verify a contact-invite link and return the parsed identity if its
+    /// self-signature is valid. Unlike `verifyScannedQR`, invites are long-lived
+    /// (sent out-of-band and opened later), so there is no freshness window — the
+    /// self-signature proves authenticity and replay is harmless for "add me".
+    func verifyInvite(_ urlString: String) -> VerificationQR? {
+        guard let url = URL(string: urlString),
+              let qr = VerificationQR.fromURL(url),
+              url.host == VerificationQR.inviteHost,
+              // Reject malformed keys early: 32-byte Noise/Ed25519 keys = 64 hex chars.
+              qr.noiseKeyHex.count == 64, qr.signKeyHex.count == 64,
+              let sig = Data(hexString: qr.sigHex),
+              let signKey = Data(hexString: qr.signKeyHex),
+              let noise = noise else { return nil }
+        return noise.verifySignature(sig, for: qr.canonicalBytes(), publicKey: signKey) ? qr : nil
     }
 
     /// Verify a scanned QR and return the parsed payload if valid (signature + freshness checks)
