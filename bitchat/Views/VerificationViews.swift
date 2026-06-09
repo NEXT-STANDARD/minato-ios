@@ -298,6 +298,11 @@ struct VerificationSheetView: View {
         return VerificationService.shared.buildMyQRString(nickname: viewModel.nickname, npub: npub) ?? ""
     }
 
+    private func myInviteString() -> String {
+        let npub = try? viewModel.idBridge.getCurrentNostrIdentity()?.npub
+        return VerificationService.shared.buildMyInviteString(nickname: viewModel.nickname, npub: npub) ?? ""
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Top header (always at top)
@@ -372,6 +377,20 @@ struct VerificationSheetView: View {
                     }
                     .buttonStyle(.bordered)
                     .tint(.gray)
+
+                    // Share a remote contact-invite link (works without meeting in person).
+                    let invite = myInviteString()
+                    if !invite.isEmpty {
+                        ShareLink(item: invite) {
+                            Label(
+                                String(localized: "contact.invite.share", defaultValue: "招待リンクを共有"),
+                                systemImage: "person.badge.plus"
+                            )
+                            .font(.bitchatSystem(size: 13, weight: .medium, design: .monospaced))
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(MinatoTheme.accent)
+                    }
                 }
 
                 // Optional: Remove verification for selected peer (if verified)

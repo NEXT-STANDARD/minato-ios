@@ -133,6 +133,8 @@ final class VerificationService {
         guard let url = URL(string: urlString),
               let qr = VerificationQR.fromURL(url),
               url.host == VerificationQR.inviteHost,
+              // Reject malformed keys early: 32-byte Noise/Ed25519 keys = 64 hex chars.
+              qr.noiseKeyHex.count == 64, qr.signKeyHex.count == 64,
               let sig = Data(hexString: qr.sigHex),
               let signKey = Data(hexString: qr.signKeyHex),
               let noise = noise else { return nil }

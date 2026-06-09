@@ -1238,6 +1238,30 @@ struct ContentView: View {
         } message: {
             Text("content.alert.screenshot.message")
         }
+        .alert(
+            Text("contact.invite.add_title", comment: "Title of the add-contact prompt shown after opening an invite link"),
+            isPresented: Binding(
+                get: { viewModel.pendingContactInvite != nil },
+                set: { if !$0 { viewModel.declineContactInvite() } }
+            ),
+            presenting: viewModel.pendingContactInvite
+        ) { invite in
+            Button {
+                viewModel.acceptContactInvite()
+            } label: {
+                Text("contact.invite.add_confirm", comment: "Confirm button on the add-contact prompt")
+            }
+            Button(role: .cancel) {
+                viewModel.declineContactInvite()
+            } label: {
+                Text("common.cancel", comment: "Cancel button")
+            }
+        } message: { invite in
+            Text(String(
+                format: String(localized: "contact.invite.add_message", defaultValue: "%1$@（%2$@）を連絡先に追加してつながりますか？"),
+                invite.displayName, invite.npubShort
+            ))
+        }
         .background(backgroundColor.opacity(0.95))
         // Outermost so the high-alert frame draws over the whole window AND
         // \.minatoAlert propagates into every presented sheet/cover below.

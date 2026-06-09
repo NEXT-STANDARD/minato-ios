@@ -273,6 +273,10 @@ private extension MessageListView {
         // Accept both minato:// (new) and bitchat:// (legacy) deep links.
         guard MinatoBrand.acceptsURLScheme(url.scheme) else { return }
         switch url.host {
+        case "add":
+            // Remote contact invite (minato://add?…): verify + prompt to add.
+            viewModel.receiveContactInvite(from: url)
+
         case "user":
             let id = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let peerID = PeerID(str: id.removingPercentEncoding ?? id)
