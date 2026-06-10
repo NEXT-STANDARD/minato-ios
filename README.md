@@ -1,122 +1,116 @@
-<img width="256" height="256" alt="icon_128x128@2x" src="https://github.com/user-attachments/assets/90133f83-b4f6-41c6-aab9-25d0859d2a47" />
+<p align="center">
+  <img width="180" height="180" alt="MINATO app icon — a beacon over a calm night harbor" src="bitchat/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" />
+</p>
 
-## bitchat
+<h1 align="center">MINATO</h1>
 
-A decentralized peer-to-peer messaging app with dual transport architecture: local Bluetooth mesh networks for offline communication and internet-based Nostr protocol for global reach. No accounts, no phone numbers, no central servers. It's the side-groupchat.
+<p align="center"><strong>圏外でも、家族に「無事」を届ける。</strong><br/>
+Tell your family you're safe — even off the grid.</p>
 
-[bitchat.free](http://bitchat.free)
+---
 
-📲 [App Store](https://apps.apple.com/us/app/bitchat-mesh/id6748219622)
+MINATO（港）は、**地震・津波・台風・停電などで通信インフラが落ちても**、近くの人や信頼する相手に安否を届けるための、オフラインファースト安否確認アプリです。基地局もインターネットも要りません。スマートフォン同士が **Bluetooth LE mesh** で直接つながり、メッセージを多段中継（store-and-forward）し、誰かがネット圏内に出たら **Nostr / インターネット** 経由で外へ運びます。
 
-## License
+平時の MINATO は、AI エージェント同士が予定調整などの生活支援を行う **MINATO Agent Protocol** のリファレンス実装です。非常時には同じ mesh が、安否・粗い位置・「助けが必要」を運ぶ災害モードに切り替わります。
 
-This project is released into the public domain. See the [LICENSE](LICENSE) file for details.
+> **港（minato）= harbor.** 災害時の安全な避難港であり、エージェントが接続する港。この比喩が名前・タグライン・テーマ（凪いだ紺青に灯台のアンバー、災害モードでは高警戒の赤／橙）の由来です。
+
+MINATO は、実戦投入され公開監査されている **[bitchat](https://github.com/jackjackbits/bitchat)** の BLE mesh / Nostr トランスポートと Noise Protocol 暗号の上に構築されています。自前の暗号は書いていません — 実証済みのスタックの上に立つことは意図的な信頼上の判断です（詳細は [Credits](#credits--provenance)）。
+
+## なぜ MINATO か
+
+災害初動の数時間、スマホのバッテリーは残っていても通常の通信経路は使えないことがあります。MINATO 災害モードはその数時間に次を可能にします。
+
+- **無事を届ける** — 近くの人や信頼先へ「無事です」を broadcast
+- **粗い位置を安全に共有** — 既定は coarse（geohash / エリア名）。precise は明示確認が要る高リスク操作
+- **助けが必要な人を優先的に見つける** — `助けが必要` をトリアージ用に高優先で
+- **電池残量を判断材料に** — 「今すぐ対応すべきか」を残量・低電力モードから読む
+- **圏外でも中継** — BLE mesh で運び、誰かがネットに出たら Nostr fallback で外へ
 
 ## Features
 
-- **Dual Transport Architecture**: Bluetooth mesh for offline + Nostr protocol for internet-based messaging
-- **Location-Based Channels**: Geographic chat rooms using geohash coordinates over global Nostr relays
-- **Intelligent Message Routing**: Automatically chooses best transport (Bluetooth → Nostr fallback)
-- **Decentralized Mesh Network**: Automatic peer discovery and multi-hop message relay over Bluetooth LE
-- **Privacy First**: No accounts, no phone numbers, no persistent identifiers
-- **Private Message End-to-End Encryption**: [Noise Protocol](https://noiseprotocol.org) for mesh, NIP-17 for Nostr
-- **IRC-Style Commands**: Familiar `/slap`, `/msg`, `/who` style interface
-- **Universal App**: Native support for iOS and macOS
-- **Emergency Wipe**: Triple-tap to instantly clear all data
-- **Performance Optimizations**: LZ4 message compression, adaptive battery modes, and optimized networking
+- **オフラインファースト安否確認（災害モード）** — `無事です` / `助けが必要` / `家族を探す` / `近くの情報を見る` の大きな操作。安否カードはバッテリー・最終更新・位置精度・direct/relay を表示
+- **MINATO Agent Protocol（0x30–0x37）** — Agent Card 交換、Trust Mode（`plan` / `suggest` / `auto` / `full_auto`）、capabilities / intents、Ed25519 署名付きエンベロープ
+- **デュアルトランスポート** — オフラインの Bluetooth mesh ＋ インターネットの Nostr。経路は自動選択（Bluetooth → Nostr fallback）
+- **多段中継 mesh** — ピア自動探索と multi-hop relay（Bluetooth LE）
+- **エンドツーエンド暗号** — mesh は [Noise Protocol](https://noiseprotocol.org)、Nostr は NIP-17 gift-wrap
+- **プライバシーファースト** — アカウント・電話番号・永続 IDなし。コンタクト交換は QR / 招待リンク（承認ゲート付き）
+- **緊急ワイプ** — トリプルタップで全データを即時消去
+- **多言語** — UI とパーミッション文言を 29 言語にローカライズ
 
-## [Technical Architecture](https://deepwiki.com/permissionlesstech/bitchat)
+## How it works（アーキテクチャ）
 
-BitChat uses a **hybrid messaging architecture** with two complementary transport layers:
+MINATO のトランスポートは bitchat 由来の **ハイブリッド構成** です。MINATO はその上に Agent Protocol と災害安否レイヤーを載せています。
 
-### Bluetooth Mesh Network (Offline)
+```
+Application      SwiftUI（ContentView, Views/, ViewModels/）
+Agent / Safety   bitchat/MINATO/（Agent Card, Trust Mode, Disaster Mode, stores）
+MINATO Protocol  0x30–0x37 メッセージタイプ（Ed25519 署名）
+Transport        BLE Mesh（offline）/ Nostr Relay（internet）  ← bitchat base
+Crypto           Noise Protocol / secp256k1                    ← bitchat base
+```
 
-- **Local Communication**: Direct peer-to-peer within Bluetooth range
-- **Multi-hop Relay**: Messages route through nearby devices (max 7 hops)
-- **No Internet Required**: Works completely offline in disaster scenarios
-- **Noise Protocol Encryption**: End-to-end encryption with forward secrecy
-- **Binary Protocol**: Compact packet format optimized for Bluetooth LE constraints
-- **Automatic Discovery**: Peer discovery and connection management
-- **Adaptive Power**: Battery-optimized duty cycling
+### Bluetooth Mesh（オフライン）
 
-### Nostr Protocol (Internet)
+- 圏内のピアと直接 P2P、近隣デバイス経由で multi-hop relay（最大 7 hops）
+- インターネット不要 — 災害シナリオで完全オフライン動作
+- Noise Protocol による forward secrecy 付き E2E 暗号
+- BLE 制約に最適化したコンパクトなバイナリプロトコル、適応的な省電力デューティサイクル
 
-- **Global Reach**: Connect with users worldwide via internet relays
-- **Location Channels**: Geographic chat rooms using geohash coordinates
-- **290+ Relay Network**: Distributed across the globe for reliability
-- **NIP-17 Encryption**: Gift-wrapped private messages for internet privacy
-- **Ephemeral Keys**: Fresh cryptographic identity per geohash area
+### Nostr Protocol（インターネット）
 
-### Channel Types
+- ネット圏内に出たデバイスが安否を外へ store-and-forward
+- geohash ベースの位置チャンネル、分散リレー網
+- NIP-17 gift-wrap による DM 秘匿、geohash エリアごとの ephemeral 鍵
 
-#### `mesh #bluetooth`
-
-- **Transport**: Bluetooth Low Energy mesh network
-- **Scope**: Local devices within multi-hop range
-- **Internet**: Not required
-- **Use Case**: Offline communication, protests, disasters, remote areas
-
-#### Location Channels (`block #dr5rsj7`, `neighborhood #dr5rs`, `country #dr`)
-
-- **Transport**: Nostr protocol over internet
-- **Scope**: Geographic areas defined by geohash precision
-  - `block` (7 chars): City block level
-  - `neighborhood` (6 chars): District/neighborhood
-  - `city` (5 chars): City level
-  - `province` (4 chars): State/province
-  - `region` (2 chars): Country/large region
-- **Internet**: Required (connects to Nostr relays)
-- **Use Case**: Location-based community chat, local events, regional discussions
-
-### Direct Message Routing
-
-Private messages use **intelligent transport selection**:
-
-1. **Bluetooth First** (preferred when available)
-
-   - Direct connection with established Noise session
-   - Fastest and most private option
-
-2. **Nostr Fallback** (when Bluetooth unavailable)
-
-   - Uses recipient's Nostr public key
-   - NIP-17 gift-wrapping for privacy
-   - Routes through global relay network
-
-3. **Smart Queuing** (when neither available)
-   - Messages queued until transport becomes available
-   - Automatic delivery when connection established
-
-For detailed protocol documentation, see the [Technical Whitepaper](WHITEPAPER.md).
+詳細は [Technical Whitepaper](WHITEPAPER.md) と `docs/`（[MINATO-disaster-mode.md](docs/MINATO-disaster-mode.md) / [MINATO-message-shapes.md](docs/MINATO-message-shapes.md)）を参照。
 
 ## Setup
 
-### Option 1: Using Xcode
+> 内部の Xcode プロジェクト／ターゲット名は、upstream（bitchat）ベースのため引き続き `bitchat`（例: `bitchat.xcodeproj`, scheme `bitchat (iOS)`）です。ホーム画面・About・ストア表示はすべて **MINATO** です。
 
-   ```bash
-   cd bitchat
-   open bitchat.xcodeproj
-   ```
+### 前提
 
-   To run on a device there're a few steps to prepare the code:
-   - Clone the local configs: `cp Configs/Local.xcconfig.example Configs/Local.xcconfig`
-   - Add your Developer Team ID into the newly created `Configs/Local.xcconfig`
-      - Bundle ID would be set to `chat.bitchat.<team_id>` (unless you set to something else)
-   - Entitlements need to be updated manually (TODO: Automate):
-      - Search and replace `group.chat.bitchat` with `group.<your_bundle_id>` (e.g. `group.chat.bitchat.ABC123`)
+- Xcode（最新安定版）、macOS
+- BLE テストには実機 iPhone が必要（Simulator は BLE 非対応）
 
-### Option 2: Using `just`
+### ローカル設定
 
-   ```bash
-   brew install just
-   ```
+```bash
+# Local.xcconfig に Team ID を設定
+cp Configs/Local.xcconfig.example Configs/Local.xcconfig
+# DEVELOPMENT_TEAM（必要なら PRODUCT_BUNDLE_IDENTIFIER）を編集
+```
 
-Want to try this on macos: `just run` will set it up and run from source.
-Run `just clean` afterwards to restore things to original state for mobile app building and development.
+```bash
+# iOS 向けビルド（署名なし・クイックチェック）
+xcodebuild -project bitchat.xcodeproj \
+  -scheme "bitchat (iOS)" -configuration Debug \
+  -destination 'generic/platform=iOS' \
+  -skipPackagePluginValidation \
+  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+```
+
+ビルド・配布の詳細は [docs/TESTFLIGHT.md](docs/TESTFLIGHT.md) を参照。
+
+## Credits & Provenance
+
+MINATO は **[bitchat](https://github.com/jackjackbits/bitchat)**（jackjackbits/bitchat）の上に構築されています。bitchat から受け継いでいるもの:
+
+- **BLE mesh ＋ Nostr** デュアルトランスポート
+- **Noise Protocol** によるエンドツーエンド暗号
+- バイナリパケット形式、gossip/sync、ルーティング
+
+bitchat は **The Unlicense**（パブリックドメイン）で公開されており、帰属の法的義務はありません。それでも明記するのは、**実証済みで監査されたトランスポート／暗号スタックの上に立つことが、意図的な信頼上の判断**だからです。MINATO は自前の暗号を実装していません。upstream のセキュリティパッチは継続的にマージしています（`upstream` remote）。
+
+MINATO 固有の追加分（Agent Protocol 0x30–0x37、Trust Mode、災害安否確認モード、29 言語の MINATO パーミッション文言、ブランド／テーマ／アイコン）は本リポジトリ（NEXT-STANDARD/minato-ios）で開発しています。プロトコル仕様の source of truth は別リポジトリ [NEXT-STANDARD/minato-spec](https://github.com/NEXT-STANDARD/minato-spec) です。
+
+## License
+
+本プロジェクトはパブリックドメインで公開されています（base である bitchat の Unlicense を踏襲）。詳細は [LICENSE](LICENSE) を参照。
 
 ## Localization
 
-- Base app resources live under `bitchat/Localization/Base.lproj/`. Add new copy to `Localizable.strings` and plural rules to `Localizable.stringsdict`.
-- Share extension strings are separate in `bitchatShareExtension/Localization/Base.lproj/Localizable.strings`.
-- Prefer keys that describe intent (`app_info.features.offline.title`) and reuse existing ones where possible.
-- Run `xcodebuild -project bitchat.xcodeproj -scheme "bitchat (macOS)" -configuration Debug CODE_SIGNING_ALLOWED=NO build` to compile-check any localization updates.
+- ベースのアプリ文言は `bitchat/Localization/Base.lproj/`。新規コピーは `Localizable.strings`、複数形は `Localizable.stringsdict` に追加
+- Share Extension の文言は `bitchatShareExtension/Localization/` に分離
+- ブランド文言は単一の真実源（`bitchat/MINATO/Theme/MinatoBrand.swift`）を参照すること。詳細は [docs/MINATO-branding.md](docs/MINATO-branding.md)
