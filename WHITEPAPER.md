@@ -1,31 +1,102 @@
-# BitChat Protocol Whitepaper
+# MINATO Protocol Whitepaper
 
-**Version 1.1**
+**Version 1.0 (MINATO)**
 
-**Date: July 25, 2025**
+*Built on the bitchat Protocol Whitepaper v1.1. The transport foundation (Part II) is retained, with credit, from [bitchat](https://github.com/jackjackbits/bitchat) under The Unlicense.*
 
 ---
 
 ## Abstract
 
-BitChat is a decentralized, peer-to-peer messaging application designed for secure, private, and censorship-resistant communication over ephemeral, ad-hoc networks. This whitepaper details the BitChat Protocol Stack, a layered architecture that combines a modern cryptographic foundation with a flexible application protocol. At its core, BitChat leverages the Noise Protocol Framework (specifically, the `XX` pattern) to establish mutually authenticated, end-to-end encrypted sessions between peers. This document provides a technical specification of the identity management, session lifecycle, message framing, and security considerations that underpin the BitChat network.
+MINATO is an offline-first **safety check-in and agent** application for situations where communication infrastructure is degraded or absent — earthquakes, tsunami, typhoons, power outages. Its goal is simple: let you tell the people who matter that you are safe, and find those who need help, **even with no cell coverage and no internet**.
+
+MINATO is a two-layer protocol. **Part I — the MINATO layer** defines an agent protocol (message types `0x30`–`0x37`), Ed25519-signed Agent Cards, a four-step **Trust Mode** autonomy ramp, and a **Disaster Mode** of signed safety check-ins that carry status, coarse location, self-reported battery, and an explicit freshness/expiry. **Part II — the transport foundation** is the battle-tested, publicly-audited BLE-mesh / Nostr transport and Noise-Protocol encryption from bitchat, on which MINATO runs unchanged. MINATO does not roll its own cryptography; standing on a proven stack is a deliberate trust decision.
 
 ---
 
 ## 1. Introduction
 
-In an era of centralized communication platforms, BitChat offers a resilient alternative by operating without central servers. It is designed for scenarios where internet connectivity is unavailable or untrustworthy, such as protests, natural disasters, or remote areas. Communication occurs directly between devices over transports like Bluetooth Low Energy (BLE).
+In normal times, MINATO is a reference implementation of the **MINATO Agent Protocol**: AI agents that coordinate everyday tasks (for example, proposing a calendar event) under explicit, user-controlled autonomy. In a disaster, the same mesh becomes a **safety network** — broadcasting "I'm safe" / "I need help", a coarse location, and a battery reading so others can triage who to reach first, relaying multi-hop over Bluetooth LE and forwarding over Nostr the moment any device reaches the internet.
 
-The design goals of the BitChat Protocol are:
+The design goals of the MINATO layer:
 
-*   **Confidentiality:** All communication must be unreadable to third parties.
-*   **Authentication:** Users must be able to verify the identity of their correspondents.
-*   **Integrity:** Messages cannot be tampered with in transit.
-*   **Forward Secrecy:** The compromise of long-term identity keys must not compromise past session keys.
-*   **Deniability:** It should be difficult to cryptographically prove that a specific user sent a particular message.
-*   **Resilience:** The protocol must function reliably in lossy, low-bandwidth environments.
+*   **Reachability under failure:** A safety status must be deliverable when towers and internet are down, across sparse, multi-hop device chains.
+*   **Authenticity:** A check-in is Ed25519-signed; recipients can verify it was not tampered with, and can see whether the sender is a verified contact.
+*   **Honest uncertainty:** Freshness, relay distance, and self-reported fields (battery, hops) are surfaced as what they are — never as hard fact — so stale or unverifiable information is not mistaken for current truth.
+*   **Consent and least privilege:** Location is coarse by default; precise location and auto-sharing require explicit, scoped, expiring opt-in (Trust Mode and emergency overrides).
+*   **Fail open toward delivery:** A distress message from an unknown sender must remain visible; abuse is mitigated by rate-limiting and ranking, never by silencing a possible victim.
 
-This paper specifies the technical details of the protocol designed to meet these goals.
+These goals build on the transport guarantees inherited from bitchat — confidentiality, mutual authentication, integrity, forward secrecy, deniability, and resilience — specified in Part II.
+
+---
+
+# Part I — The MINATO Layer
+
+The MINATO layer rides inside the transport's application messages. Its eight message types occupy `0x30`–`0x37`, leaving the underlying bitchat message types untouched. Every non-handshake, non-ping MINATO envelope is Ed25519-signed and verified against the sender's cached Agent Card.
+
+## I.1. Agent Protocol Message Types (`0x30`–`0x37`)
+
+| Type | Name | Purpose |
+|------|------|---------|
+| `0x30` | `AGENT_HANDSHAKE` | Initial connection and **Agent Card** exchange. Trusts only a verified Agent Card self-signature. |
+| `0x31` | `AGENT_MESSAGE` | General conversation and information sharing. Carries Disaster-Mode `safety.checkin` payloads via its `intent`. |
+| `0x32` | `AGENT_REQUEST` | Action request (e.g. add a calendar event). |
+| `0x33` | `AGENT_RESPONSE` | Response or proposal to a request. |
+| `0x34` | `AGENT_ACK` | Confirmation or rejection. |
+| `0x35` | `AGENT_REVOKE` | Permission revocation / disconnection. `scope`: `trust`, `agent_card`, or `all`. |
+| `0x36` | `AGENT_PING` | Liveness / latency check (currently a no-op heartbeat placeholder). |
+| `0x37` | `AGENT_LOG` | Post-hoc activity log for autonomous actions. Uses `log_id` for idempotency; accepted only under `auto` / `full_auto`. |
+
+The canonical wire shapes are specified in [`docs/MINATO-message-shapes.md`](docs/MINATO-message-shapes.md), with golden examples under `docs/examples/minato-ios/`.
+
+## I.2. Agent Card and Ed25519 Signing
+
+A peer's MINATO identity is an **Agent Card** bound to the Ed25519 signing key already provided by the transport's identity layer (Part II, §3). Signing is self-contained and deterministic:
+
+**Agent Card (self-signature):**
+1. Build an unsigned `AgentCard` with `ed25519_pub_key` set to the local Ed25519 public key (hex).
+2. Canonicalize as sorted-key JSON, omitting `signature`.
+3. Sign the canonical bytes; store the hex signature in `agent_card.signature`.
+4. On `AGENT_HANDSHAKE`, verify the card's self-signature **before** caching the remote card.
+
+**Envelope (per-message signature):**
+1. Build a `MINATOPayload` envelope with `signature: nil` (note: `request_id` lives **inside** `payload`, not at the envelope top level).
+2. Canonicalize as sorted-key JSON, omitting `signature`.
+3. Sign; store the hex signature in `signature`.
+4. For every non-handshake, non-ping packet, look up the sender's cached Agent Card and verify the envelope against `agent_card.ed25519_pub_key`.
+
+A valid signature binds a message to a key — it does **not**, by itself, prove a real-world identity. MINATO therefore distinguishes a *verified contact* (a key deliberately added through the QR / invite flow with mutual approval) from a merely *key-valid* unknown sender, and surfaces that distinction in the UI.
+
+## I.3. Trust Mode
+
+Autonomy is an explicit, four-step ramp the user controls per agent. Higher modes permit more independent action and unlock additional message types (e.g. `AGENT_LOG` is accepted only under `auto` / `full_auto`).
+
+| Mode | Behavior |
+|------|----------|
+| `plan` | Propose a plan; take no action without approval. |
+| `suggest` | Suggest concrete actions for one-tap approval. |
+| `auto` | Act autonomously within granted capabilities, logging after the fact. |
+| `full_auto` | Broadest autonomy within granted capabilities. |
+
+Capabilities are scoped and risk-rated (e.g. `safety.location.coarse` is medium risk; `safety.location.precise` is high risk and requires explicit confirmation). `AGENT_REVOKE` withdraws a grant at the `trust`, `agent_card`, or `all` scope.
+
+## I.4. Disaster Mode and Safety Check-ins
+
+Disaster Mode broadcasts a signed `safety.checkin` (an `AGENT_MESSAGE` with `intent = safety.checkin`). A check-in is sent **only when the user chooses to**, or via an emergency override they enabled, and carries:
+
+*   **`status`** — `safe`, `needs_help`, `injured`, `evacuating`, `searching`, …
+*   **`location`** — **coarse by default** (geohash / area label). Precise location is high-risk, requires explicit per-share confirmation, and is sent only to a directed recipient; the broadcast copy stays coarse.
+*   **`battery`** — self-reported level, charging `state`, Low Power Mode, and a coarse `contact_window`. Authenticated as *what the sender asserts*; not independently verifiable, and labeled as such in the UI.
+*   **`needs`** — `water`, `medical`, `charging`, `shelter`, …
+*   **Freshness & expiry** — origin timestamps (`reported_at`, `last_seen_at`) plus an `expires_at`. Relay metadata (`direct` vs `mesh` with a hop estimate) is shown so relayed or stale information is never mistaken for fresh, direct contact.
+
+Check-ins are flooded over the BLE mesh, relayed multi-hop, and forwarded over Nostr by any device that reaches the internet — so an "I'm safe" can travel from an offline survivor, through intermediate phones, to a family member who is online. Design rationale, threat model, and the abuse mitigations (coarse-by-default, signed messages, dedup, rate-limiting, and the fail-open invariant for distress traffic) are detailed in [`docs/MINATO-disaster-mode.md`](docs/MINATO-disaster-mode.md).
+
+---
+
+# Part II — Transport Foundation (inherited from bitchat)
+
+*The following sections document the BLE-mesh / Noise-Protocol transport that MINATO runs on, retained — with credit — from the bitchat Protocol Whitepaper v1.1 (The Unlicense). MINATO does not modify this layer; the section numbers below are kept as in the source. Symbol names such as `BitchatPacket` / `BitchatMessage` are the actual transport types MINATO builds upon.*
 
 ---
 
@@ -306,4 +377,6 @@ Receiving peers collect all fragments and reassemble them in the correct order b
 
 ## 9. Conclusion
 
-The BitChat Protocol provides a robust and secure foundation for decentralized, peer-to-peer communication. By layering a flexible application protocol on top of the well-regarded Noise Protocol Framework, it achieves strong confidentiality, authentication, and forward secrecy. The use of a compact binary format and thoughtful security considerations like rate limiting and traffic analysis resistance make it suitable for use in challenging network environments.
+The transport foundation above provides a robust, secure substrate for decentralized, peer-to-peer communication: a flexible application protocol over the well-regarded Noise Protocol Framework, achieving strong confidentiality, authentication, and forward secrecy, with a compact binary format and resistance to traffic analysis that suit challenging network environments.
+
+**MINATO** builds on that substrate to serve a specific, life-safety purpose. By adding an Ed25519-signed agent layer (Part I), a user-controlled Trust Mode, and a Disaster Mode of signed safety check-ins with honest freshness and coarse-by-default location, MINATO turns a resilient mesh into a way to tell your family you are safe — and to find those who need help — when the infrastructure everyone relies on has failed. It does so without rolling its own cryptography, standing instead on the proven, public-domain bitchat transport it credits here.
